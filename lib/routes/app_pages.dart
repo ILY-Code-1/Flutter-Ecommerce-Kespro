@@ -4,6 +4,10 @@ import '../modules/landing/landing_page.dart';
 import '../modules/order/order_binding.dart';
 import '../modules/order/order_page.dart';
 import '../modules/success/success_page.dart';
+import '../modules/admin/login/admin_login_binding.dart';
+import '../modules/admin/login/admin_login_page.dart';
+import '../modules/admin/dashboard/admin_dashboard_binding.dart';
+import '../modules/admin/dashboard/admin_dashboard_page.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -21,6 +25,16 @@ class AppPages {
     GetPage(
       name: AppRoutes.success,
       page: () => const SuccessPage(),
+    ),
+    GetPage(
+      name: AppRoutes.adminLogin,
+      page: () => const AdminLoginPage(),
+      binding: AdminLoginBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.adminDashboard,
+      page: () => const AdminDashboardPage(),
+      binding: AdminDashboardBinding(),
     ),
   ];
 }
