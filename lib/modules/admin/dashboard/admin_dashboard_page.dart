@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../../themes/app_theme.dart';
 import '../../../data/models/catalog_model.dart';
 import 'admin_dashboard_controller.dart';
@@ -8,7 +7,6 @@ import 'widgets/admin_sidebar.dart';
 import '../catalog/catalog_controller.dart';
 import '../request_order/request_order_controller.dart';
 import '../invoice_ui/invoice_ui_controller.dart';
-import '../jadwal_sewa/jadwal_sewa_controller.dart';
 
 class AdminDashboardPage extends GetView<AdminDashboardController> {
   const AdminDashboardPage({super.key});
@@ -64,9 +62,6 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
       case 3: // Invoice
         _ensureInvoiceController();
         return _buildInvoiceContent(context, isMobile);
-      case 4: // Jadwal Sewa
-        _ensureJadwalSewaController();
-        return _buildJadwalSewaContent(context, isMobile);
       default:
         return _buildBerandaContent(context, isMobile);
     }
@@ -87,12 +82,6 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
   void _ensureInvoiceController() {
     if (!Get.isRegistered<InvoiceUIController>()) {
       Get.put(InvoiceUIController());
-    }
-  }
-
-  void _ensureJadwalSewaController() {
-    if (!Get.isRegistered<JadwalSewaController>()) {
-      Get.put(JadwalSewaController());
     }
   }
 
@@ -458,157 +447,6 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
             DataCell(_buildActionBtn(Icons.visibility_rounded, AppTheme.accentColor, () => invoiceController.goToDetail(invoice))),
           ]);
         }).toList(),
-      ),
-    );
-  }
-
-  // ==================== JADWAL SEWA CONTENT ====================
-  Widget _buildJadwalSewaContent(BuildContext context, bool isMobile) {
-    final jadwalController = Get.find<JadwalSewaController>();
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF0F4FF), Color(0xFFE8F4FD), Color(0xFFF5F0FF)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(context, isMobile, 'Jadwal Sewa', 'Kelola jadwal sewa produk'),
-          _buildJadwalSewaActions(jadwalController, isMobile),
-          Expanded(
-            child: Obx(() {
-              if (jadwalController.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (jadwalController.schedules.isEmpty) {
-                return _buildEmptyState('Belum ada jadwal sewa', Icons.calendar_month_rounded);
-              }
-              return _buildJadwalSewaList(jadwalController, isMobile);
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJadwalSewaActions(JadwalSewaController controller, bool isMobile) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          // Filter by status
-          Obx(() => DropdownButton<RentalStatus?>(
-            value: controller.selectedStatus.value,
-            hint: const Text('Filter Status'),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Semua Status')),
-              ...RentalStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
-            ],
-            onChanged: controller.filterByStatus,
-          )),
-          // Filter by month
-          Obx(() => DropdownButton<DateTime?>(
-            value: controller.selectedMonth.value,
-            hint: const Text('Filter Bulan'),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Semua Bulan')),
-              ...List.generate(12, (i) {
-                final date = DateTime(DateTime.now().year, DateTime.now().month - i);
-                return DropdownMenuItem(
-                  value: date,
-                  child: Text(DateFormat('MMMM yyyy').format(date)),
-                );
-              }),
-            ],
-            onChanged: controller.filterByMonth,
-          )),
-          // Refresh
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: controller.fetchSchedules,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJadwalSewaList(JadwalSewaController controller, bool isMobile) {
-    if (isMobile) {
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: controller.schedules.length,
-        itemBuilder: (context, index) {
-          final schedule = controller.schedules[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFFE6FBFF), borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: Text(schedule.catalogName ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3748)))),
-                    _buildStatusBadge(schedule.status.label, controller.getStatusColor(schedule.status), controller.getStatusBgColor(schedule.status)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(schedule.formattedDateRange, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF2D3748))),
-                const SizedBox(height: 4),
-                Text(schedule.customerName ?? '-', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildActionBtn(Icons.edit_rounded, AppTheme.accentColor, () => controller.goToDetail(schedule)),
-                    const SizedBox(width: 8),
-                    _buildActionBtn(Icons.delete_rounded, Colors.red, () => controller.deleteSchedule(schedule)),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(const Color(0xFFE6FBFF)),
-          columns: const [
-            DataColumn(label: Text('Produk', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Tanggal', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Customer', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Lokasi', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w600))),
-            DataColumn(label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.w600))),
-          ],
-          rows: controller.schedules.map((schedule) {
-            return DataRow(cells: [
-              DataCell(Text(schedule.catalogName ?? '-', style: const TextStyle(fontWeight: FontWeight.w600))),
-              DataCell(Text(schedule.formattedDateRange)),
-              DataCell(Text(schedule.customerName ?? '-')),
-              DataCell(Text(schedule.eventLocation ?? '-')),
-              DataCell(_buildStatusBadge(schedule.status.label, controller.getStatusColor(schedule.status), controller.getStatusBgColor(schedule.status))),
-              DataCell(Row(
-                children: [
-                  _buildActionBtn(Icons.edit_rounded, AppTheme.accentColor, () => controller.goToDetail(schedule)),
-                  const SizedBox(width: 8),
-                  _buildActionBtn(Icons.delete_rounded, Colors.red, () => controller.deleteSchedule(schedule)),
-                ],
-              )),
-            ]);
-          }).toList(),
-        ),
       ),
     );
   }
