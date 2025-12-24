@@ -8,7 +8,10 @@ class AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AdminDashboardController>();
+    // Pastikan controller sudah di-register, jika belum maka register
+    final controller = Get.isRegistered<AdminDashboardController>()
+        ? Get.find<AdminDashboardController>()
+        : Get.put(AdminDashboardController(), permanent: true);
 
     return Container(
       width: 280,

@@ -12,6 +12,12 @@ import '../modules/admin/catalog/catalog_binding.dart';
 import '../modules/admin/catalog/views/catalog_list_page.dart';
 import '../modules/admin/catalog/views/catalog_detail_page.dart';
 import '../modules/admin/catalog/views/catalog_add_page.dart';
+import '../modules/admin/request_order/request_order_binding.dart';
+import '../modules/admin/request_order/views/request_order_list_page.dart';
+import '../modules/admin/request_order/views/request_order_detail_page.dart';
+import '../modules/admin/invoice_ui/invoice_ui_binding.dart';
+import '../modules/admin/invoice_ui/views/invoice_list_page.dart';
+import '../modules/admin/invoice_ui/views/invoice_detail_page.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -55,6 +61,28 @@ class AppPages {
       name: AppRoutes.catalogAdd,
       page: () => const CatalogAddPage(),
       binding: CatalogBinding(),
+    ),
+    // Request Order routes
+    GetPage(
+      name: AppRoutes.requestOrder,
+      page: () => const RequestOrderListPage(),
+      binding: RequestOrderBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.requestOrderDetail,
+      page: () => const RequestOrderDetailPage(),
+      binding: RequestOrderBinding(),
+    ),
+    // Invoice routes
+    GetPage(
+      name: AppRoutes.invoice,
+      page: () => const InvoiceListPage(),
+      binding: InvoiceUIBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.invoiceDetail,
+      page: () => const InvoiceDetailPage(),
+      binding: InvoiceUIBinding(),
     ),
   ];
 }

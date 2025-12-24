@@ -325,18 +325,24 @@ class CatalogSidebar extends StatelessWidget {
       case 'Katalog':
         // Already on catalog
         break;
-      case 'Logout':
-        _showLogoutConfirmation();
+      case 'Request Order':
+        Get.toNamed(AppRoutes.requestOrder);
         break;
-      default:
-        // Other menus not implemented yet
+      case 'Invoice':
+        Get.toNamed(AppRoutes.invoice);
+        break;
+      case 'Jadwal Sewa':
         Get.snackbar(
           'Info',
-          'Halaman $menuItem belum tersedia',
+          'Halaman Jadwal Sewa belum tersedia',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.blue.shade100,
           colorText: Colors.blue.shade700,
         );
+        break;
+      case 'Logout':
+        _showLogoutConfirmation();
+        break;
     }
   }
 

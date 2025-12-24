@@ -21,12 +21,7 @@ class AdminDashboardController extends GetxController {
       return;
     }
     
-    // Navigate to Katalog page
-    if (menuItems[index] == 'Katalog') {
-      Get.toNamed(AppRoutes.catalog);
-      return;
-    }
-    
+    // Update selected menu index - content akan di-render di admin_dashboard_page
     selectedMenuIndex.value = index;
   }
 

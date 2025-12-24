@@ -7,6 +7,7 @@ class CustomTextField extends StatelessWidget {
   final int maxLines;
   final TextInputType? keyboardType;
   final Function(String)? onChanged;
+  final IconData? prefixIcon;
 
   const CustomTextField({
     super.key,
@@ -16,6 +17,7 @@ class CustomTextField extends StatelessWidget {
     this.maxLines = 1,
     this.keyboardType,
     this.onChanged,
+    this.prefixIcon,
   });
 
   @override
@@ -38,6 +40,9 @@ class CustomTextField extends StatelessWidget {
           onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
+            prefixIcon: prefixIcon != null 
+                ? Icon(prefixIcon, color: Colors.grey.shade500) 
+                : null,
           ),
         ),
       ],

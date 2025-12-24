@@ -1,38 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../data/repositories/order_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../data/models/catalog_model.dart';
+import '../../data/repositories/catalog_repository.dart';
 
 /// Controller untuk mengelola state Order dari landing page (Public user)
-/// 
-/// Access Control:
-/// - CREATE: Public user only (from landing page)
-/// - READ/UPDATE/DELETE: Handled by AdminOrderController
 class OrderController extends GetxController {
-  final OrderRepository _repository = OrderRepository();
+  final CatalogRepository _catalogRepository = CatalogRepository();
+  final _supabase = Supabase.instance.client;
 
-  // Form fields
-  final namaEO = ''.obs;
-  final email = ''.obs;
-  final selectedProducts = <String>[].obs;
+  // Form controllers
+  final namaEOController = TextEditingController();
+  final emailController = TextEditingController();
+  final whatsappController = TextEditingController();
+  final lokasiController = TextEditingController();
+  final catatanController = TextEditingController();
+
+  // Form fields (reactive)
   final tanggalMulai = Rxn<DateTime>();
-  final lokasi = ''.obs;
   final durasi = ''.obs;
-  final catatan = ''.obs;
+  final selectedCatalogIds = <String>{}.obs;
+
+  // Data
+  final catalogs = <CatalogModel>[].obs;
+  final isLoadingCatalogs = false.obs;
 
   // State
   final isLoading = false.obs;
   final errorMessage = RxnString();
 
-  final produkList = [
-    'Backdrop',
-    'Panggung',
-    'Tenant/Booth',
-    'Sound System',
-    'Lighting',
-    'Kursi & Meja',
-    'Dekorasi',
-    'Lainnya',
-  ];
+  // Success data untuk halaman success
+  final lastOrderData = Rxn<Map<String, dynamic>>();
 
   final durasiList = [
     '1 Hari',
@@ -41,16 +39,111 @@ class OrderController extends GetxController {
     'Lebih dari 1 Minggu',
   ];
 
-  /// Toggle product selection
-  void toggleProduct(String product) {
-    if (selectedProducts.contains(product)) {
-      selectedProducts.remove(product);
-    } else {
-      selectedProducts.add(product);
+  @override
+  void onInit() {
+    super.onInit();
+    _loadCatalogs();
+    _checkPreselectedCatalog();
+  }
+
+  @override
+  void onClose() {
+    namaEOController.dispose();
+    emailController.dispose();
+    whatsappController.dispose();
+    lokasiController.dispose();
+    catatanController.dispose();
+    super.onClose();
+  }
+
+  /// Load catalogs dari Supabase
+  Future<void> _loadCatalogs() async {
+    try {
+      isLoadingCatalogs.value = true;
+      final items = await _catalogRepository.fetchActiveForLandingPage();
+      catalogs.assignAll(items);
+    } catch (e) {
+      debugPrint('Error loading catalogs: $e');
+    } finally {
+      isLoadingCatalogs.value = false;
     }
   }
 
-  /// Submit order to Supabase (Public user - create order)
+  /// Check jika ada catalog yang di-preselect dari landing page
+  void _checkPreselectedCatalog() {
+    final args = Get.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      final catalogId = args['catalogId'] as String?;
+      if (catalogId != null) {
+        selectedCatalogIds.add(catalogId);
+      }
+    }
+  }
+
+  /// Toggle catalog selection
+  void toggleCatalog(String catalogId) {
+    if (selectedCatalogIds.contains(catalogId)) {
+      selectedCatalogIds.remove(catalogId);
+    } else {
+      selectedCatalogIds.add(catalogId);
+    }
+  }
+
+  /// Check if catalog is selected
+  bool isCatalogSelected(String catalogId) {
+    return selectedCatalogIds.contains(catalogId);
+  }
+
+  /// Get selected catalogs
+  List<CatalogModel> get selectedCatalogs {
+    return catalogs.where((c) => selectedCatalogIds.contains(c.id)).toList();
+  }
+
+  /// Calculate total estimation
+  double get totalEstimation {
+    return selectedCatalogs.fold(0, (sum, c) => sum + c.priceEstimation);
+  }
+
+  /// Format total as Rupiah
+  String get formattedTotal {
+    final formatted = totalEstimation.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
+  /// Validate WhatsApp number (Indonesian format)
+  bool _isValidWhatsApp(String number) {
+    // Remove spaces and dashes
+    final cleaned = number.replaceAll(RegExp(r'[\s\-]'), '');
+    
+    // Check if starts with 08, +62, or 62
+    if (cleaned.startsWith('08')) {
+      return cleaned.length >= 10 && cleaned.length <= 13;
+    }
+    if (cleaned.startsWith('+62')) {
+      return cleaned.length >= 12 && cleaned.length <= 15;
+    }
+    if (cleaned.startsWith('62')) {
+      return cleaned.length >= 11 && cleaned.length <= 14;
+    }
+    return false;
+  }
+
+  /// Format WhatsApp to 62xxx format
+  String _formatWhatsApp(String number) {
+    final cleaned = number.replaceAll(RegExp(r'[\s\-\+]'), '');
+    if (cleaned.startsWith('08')) {
+      return '62${cleaned.substring(1)}';
+    }
+    if (cleaned.startsWith('62')) {
+      return cleaned;
+    }
+    return cleaned;
+  }
+
+  /// Submit order to Supabase
   Future<void> submitOrder() async {
     if (!_validateForm()) return;
 
@@ -58,16 +151,47 @@ class OrderController extends GetxController {
       isLoading.value = true;
       errorMessage.value = null;
 
-      await _repository.create(
-        customerName: namaEO.value,
-        email: email.value,
-        eventDate: tanggalMulai.value!,
-        location: lokasi.value,
-        duration: durasi.value,
-        catalogItems: selectedProducts.toList(),
-        totalPrice: 0, // Price calculated later by admin
-        notes: catatan.value.isNotEmpty ? catatan.value : null,
-      );
+      final formattedWhatsapp = _formatWhatsApp(whatsappController.text);
+
+      // Prepare data
+      final orderData = {
+        'nama_eo': namaEOController.text.trim(),
+        'email': emailController.text.trim(),
+        'whatsapp': formattedWhatsapp,
+        'tanggal_mulai': tanggalMulai.value!.toIso8601String().split('T')[0],
+        'lokasi': lokasiController.text.trim(),
+        'durasi': durasi.value,
+        'catatan': catatanController.text.trim().isNotEmpty 
+            ? catatanController.text.trim() 
+            : null,
+        'catalog_ids': selectedCatalogIds.toList(),
+        'total_estimation': totalEstimation,
+        'status': 'masuk',
+      };
+
+      // Insert to Supabase
+      final response = await _supabase
+          .from('request_orders')
+          .insert(orderData)
+          .select()
+          .single();
+
+      // Store order data for success page
+      lastOrderData.value = {
+        'id': response['id'],
+        'nama_eo': namaEOController.text.trim(),
+        'email': emailController.text.trim(),
+        'whatsapp': formattedWhatsapp,
+        'tanggal_mulai': tanggalMulai.value,
+        'lokasi': lokasiController.text.trim(),
+        'durasi': durasi.value,
+        'catatan': catatanController.text.trim(),
+        'catalogs': selectedCatalogs.map((c) => {
+          'name': c.name,
+          'price': c.formattedPrice,
+        }).toList(),
+        'total': formattedTotal,
+      };
 
       // Clear form
       clearForm();
@@ -90,15 +214,27 @@ class OrderController extends GetxController {
 
   /// Validate form before submit
   bool _validateForm() {
-    if (namaEO.value.isEmpty) {
+    if (namaEOController.text.trim().isEmpty) {
       _showError('Nama Event Organizer harus diisi');
       return false;
     }
-    if (email.value.isEmpty) {
+    if (emailController.text.trim().isEmpty) {
       _showError('Email harus diisi');
       return false;
     }
-    if (selectedProducts.isEmpty) {
+    if (!GetUtils.isEmail(emailController.text.trim())) {
+      _showError('Format email tidak valid');
+      return false;
+    }
+    if (whatsappController.text.trim().isEmpty) {
+      _showError('Nomor WhatsApp harus diisi');
+      return false;
+    }
+    if (!_isValidWhatsApp(whatsappController.text.trim())) {
+      _showError('Format nomor WhatsApp tidak valid.\nContoh: 08123456789 atau 6281234567890');
+      return false;
+    }
+    if (selectedCatalogIds.isEmpty) {
       _showError('Pilih minimal satu produk');
       return false;
     }
@@ -106,7 +242,7 @@ class OrderController extends GetxController {
       _showError('Tanggal mulai harus dipilih');
       return false;
     }
-    if (lokasi.value.isEmpty) {
+    if (lokasiController.text.trim().isEmpty) {
       _showError('Lokasi harus diisi');
       return false;
     }
@@ -129,12 +265,59 @@ class OrderController extends GetxController {
 
   /// Clear form fields
   void clearForm() {
-    namaEO.value = '';
-    email.value = '';
-    selectedProducts.clear();
+    namaEOController.clear();
+    emailController.clear();
+    whatsappController.clear();
+    lokasiController.clear();
+    catatanController.clear();
+    selectedCatalogIds.clear();
     tanggalMulai.value = null;
-    lokasi.value = '';
     durasi.value = '';
-    catatan.value = '';
+  }
+
+  /// Generate WhatsApp message for success page
+  String generateWhatsAppMessage() {
+    final data = lastOrderData.value;
+    if (data == null) return '';
+
+    final catalogList = (data['catalogs'] as List)
+        .map((c) => '• ${c['name']} (${c['price']})')
+        .join('\n');
+
+    final tanggal = data['tanggal_mulai'] as DateTime;
+    final formattedDate = '${tanggal.day}/${tanggal.month}/${tanggal.year}';
+
+    final message = '''
+Halo Admin Kespro Event Hub! 👋
+
+Saya ingin konfirmasi request order berikut:
+
+📋 *DATA PEMESAN*
+Nama: ${data['nama_eo']}
+Email: ${data['email']}
+WhatsApp: ${data['whatsapp']}
+
+📦 *PRODUK YANG DIPESAN*
+$catalogList
+
+📍 *DETAIL EVENT*
+Tanggal: $formattedDate
+Lokasi: ${data['lokasi']}
+Durasi: ${data['durasi']}
+${data['catatan']?.isNotEmpty == true ? 'Catatan: ${data['catatan']}' : ''}
+
+💰 *TOTAL ESTIMASI*
+${data['total']}
+
+Mohon informasi lebih lanjut mengenai ketersediaan dan proses selanjutnya. Terima kasih! 🙏
+''';
+
+    return Uri.encodeComponent(message.trim());
+  }
+
+  /// Get WhatsApp URL
+  String getWhatsAppUrl(String adminNumber) {
+    final message = generateWhatsAppMessage();
+    return 'https://wa.me/$adminNumber?text=$message';
   }
 }
