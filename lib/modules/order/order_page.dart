@@ -63,11 +63,7 @@ class OrderPage extends GetView<OrderController> {
                         onChanged: (val) => controller.email.value = val,
                       ),
                       const SizedBox(height: 20),
-                      _buildDropdown(
-                        label: 'Produk yang Dipesan',
-                        items: controller.produkList,
-                        onChanged: (val) => controller.produk.value = val ?? '',
-                      ),
+                      _buildProductSelector(),
                       const SizedBox(height: 20),
                       _buildDatePicker(context),
                       const SizedBox(height: 20),
@@ -103,6 +99,40 @@ class OrderPage extends GetView<OrderController> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProductSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Produk yang Dipesan (bisa pilih lebih dari satu)',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Obx(() => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: controller.produkList.map((product) {
+            final isSelected = controller.selectedProducts.contains(product);
+            return FilterChip(
+              label: Text(product),
+              selected: isSelected,
+              onSelected: (_) => controller.toggleProduct(product),
+              selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+              checkmarkColor: AppTheme.primaryColor,
+              labelStyle: TextStyle(
+                color: isSelected ? AppTheme.primaryColor : Colors.grey.shade700,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            );
+          }).toList(),
+        )),
+      ],
     );
   }
 

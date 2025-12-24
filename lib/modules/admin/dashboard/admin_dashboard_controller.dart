@@ -20,6 +20,13 @@ class AdminDashboardController extends GetxController {
       _showLogoutConfirmation();
       return;
     }
+    
+    // Navigate to Katalog page
+    if (menuItems[index] == 'Katalog') {
+      Get.toNamed(AppRoutes.catalog);
+      return;
+    }
+    
     selectedMenuIndex.value = index;
   }
 

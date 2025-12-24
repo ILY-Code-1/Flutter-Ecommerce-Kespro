@@ -4,7 +4,7 @@ import '../../widgets/nav_bar.dart';
 import 'landing_controller.dart';
 import 'sections/hero_section.dart';
 import 'sections/highlight_section.dart';
-import 'sections/kategori_section.dart';
+import 'sections/katalog_section.dart';
 import 'sections/cara_sewa_section.dart';
 import 'sections/tentang_kami_section.dart';
 import 'sections/footer_section.dart';
@@ -26,7 +26,7 @@ class LandingPage extends GetView<LandingController> {
                 children: [
                   HeroSection(key: controller.heroKey),
                   const HighlightSection(),
-                  KategoriSection(key: controller.kategoriKey),
+                  KatalogSection(key: controller.kategoriKey),
                   CaraSewaSection(key: controller.caraSewaKey),
                   TentangKamiSection(key: controller.tentangKey),
                   const FooterSection(),

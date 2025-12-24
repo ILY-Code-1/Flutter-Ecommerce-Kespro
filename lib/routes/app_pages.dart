@@ -8,6 +8,10 @@ import '../modules/admin/login/admin_login_binding.dart';
 import '../modules/admin/login/admin_login_page.dart';
 import '../modules/admin/dashboard/admin_dashboard_binding.dart';
 import '../modules/admin/dashboard/admin_dashboard_page.dart';
+import '../modules/admin/catalog/catalog_binding.dart';
+import '../modules/admin/catalog/views/catalog_list_page.dart';
+import '../modules/admin/catalog/views/catalog_detail_page.dart';
+import '../modules/admin/catalog/views/catalog_add_page.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -35,6 +39,22 @@ class AppPages {
       name: AppRoutes.adminDashboard,
       page: () => const AdminDashboardPage(),
       binding: AdminDashboardBinding(),
+    ),
+    // Catalog routes
+    GetPage(
+      name: AppRoutes.catalog,
+      page: () => const CatalogListPage(),
+      binding: CatalogBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.catalogDetail,
+      page: () => const CatalogDetailPage(),
+      binding: CatalogBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.catalogAdd,
+      page: () => const CatalogAddPage(),
+      binding: CatalogBinding(),
     ),
   ];
 }
