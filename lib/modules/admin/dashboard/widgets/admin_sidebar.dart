@@ -325,8 +325,6 @@ class AdminSidebar extends StatelessWidget {
         return Icons.shopping_cart_rounded;
       case 'Invoice':
         return Icons.receipt_long_rounded;
-      case 'Jadwal Sewa':
-        return Icons.calendar_month_rounded;
       case 'Logout':
         return Icons.logout_rounded;
       default:

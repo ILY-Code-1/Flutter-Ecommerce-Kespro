@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../../../services/email_service.dart';
 
 /// Enum untuk status pembayaran invoice
 enum InvoicePaymentStatus {
@@ -132,6 +133,28 @@ class InvoiceModel {
   }
 
   double get remainingAmount => totalAmount - paidAmount;
+
+  /// Check if there's a discount
+  bool get hasDiscount => discount > 0;
+
+  /// Calculate discount percentage based on subtotal
+  double get discountPercentage {
+    if (!hasDiscount || subtotal == 0) return 0;
+    return (discount / subtotal) * 100;
+  }
+
+  String get formattedDiscount {
+    if (!hasDiscount) return '';
+    return '${discountPercentage.toStringAsFixed(1)}%';
+  }
+
+  String get formattedSubtotal {
+    final formatted = subtotal.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
 }
 
 /// Controller untuk Invoice Admin
@@ -334,6 +357,26 @@ class InvoiceUIController extends GetxController {
             pw.SizedBox(height: 20),
             pw.Divider(),
             pw.SizedBox(height: 10),
+            // Subtotal
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Subtotal'),
+                pw.Text(invoice.formattedSubtotal),
+              ],
+            ),
+            // Discount if any
+            if (invoice.hasDiscount) ...[
+              pw.SizedBox(height: 5),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Diskon (${invoice.formattedDiscount})', style: const pw.TextStyle(color: PdfColors.red)),
+                  pw.Text('-Rp ${invoice.discount.toStringAsFixed(0)}', style: const pw.TextStyle(color: PdfColors.red)),
+                ],
+              ),
+            ],
+            pw.SizedBox(height: 10),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
@@ -422,7 +465,11 @@ class InvoiceUIController extends GetxController {
 
   void goBack() {
     selectedInvoice.value = null;
-    Get.back();
+    Get.until((route) => route.settings.name == '/admin/dashboard' || route.isFirst);
+  }
+
+  void clearSelection() {
+    selectedInvoice.value = null;
   }
 
   Color getStatusColor(InvoicePaymentStatus status) {
@@ -438,6 +485,51 @@ class InvoiceUIController extends GetxController {
       case InvoicePaymentStatus.belumBayar: return const Color(0xFFFEE2E2);
       case InvoicePaymentStatus.sudahDp: return const Color(0xFFFEF3C7);
       case InvoicePaymentStatus.lunas: return const Color(0xFFDCFCE7);
+    }
+  }
+
+  /// Send invoice email to customer
+  Future<void> sendInvoiceEmail(InvoiceModel invoice) async {
+    try {
+      isSaving.value = true;
+
+      // Prepare items for email template
+      final items = invoice.catalogDetails?.map((c) => {
+        'name': c['name'] ?? '',
+        'price': (c['price_estimation'] as num?)?.toStringAsFixed(0) ?? '0',
+      }).toList() ?? [];
+
+      final htmlContent = EmailService.generateInvoiceEmailHtml(
+        invoiceNumber: invoice.invoiceNumber,
+        customerName: invoice.namaEO,
+        eventDate: invoice.eventDate != null 
+            ? DateFormat('dd MMMM yyyy').format(invoice.eventDate!) 
+            : '-',
+        eventLocation: invoice.eventLocation ?? '-',
+        durasi: invoice.durasi ?? '-',
+        items: items,
+        subtotal: invoice.formattedSubtotal,
+        discount: invoice.hasDiscount ? 'Rp ${invoice.discount.toStringAsFixed(0)}' : '',
+        total: invoice.formattedTotal,
+        paymentStatus: invoice.paymentStatus.label,
+        hasDiscount: invoice.hasDiscount,
+      );
+
+      final success = await EmailService.sendEmail(
+        recipient: invoice.email,
+        subject: 'Invoice ${invoice.invoiceNumber} - Kespro Event Hub',
+        bodyHtml: htmlContent,
+      );
+
+      if (success) {
+        _showSuccess('Invoice berhasil dikirim ke ${invoice.email}');
+      } else {
+        _showError('Gagal mengirim email. Silakan coba lagi.');
+      }
+    } catch (e) {
+      _showError('Error: $e');
+    } finally {
+      isSaving.value = false;
     }
   }
 

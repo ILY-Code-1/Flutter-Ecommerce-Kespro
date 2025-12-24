@@ -200,6 +200,20 @@ class InvoiceDetailPage extends GetView<InvoiceUIController> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
+
+        // Send Invoice Email
+        Obx(() => ElevatedButton.icon(
+          onPressed: controller.isSaving.value ? null : () => controller.sendInvoiceEmail(invoice),
+          icon: controller.isSaving.value
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.email_rounded, color: Colors.white),
+          label: Text('Kirim ke ${invoice.email}', style: const TextStyle(color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF3B82F6),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        )),
       ],
     );
   }

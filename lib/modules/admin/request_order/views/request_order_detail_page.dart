@@ -114,12 +114,75 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
         _buildInfoRow('Lokasi', order.lokasi),
         _buildInfoRow('Durasi', order.durasi),
         _buildInfoRow('Produk', order.catalogNames),
-        _buildInfoRow('Total Estimasi', order.formattedPrice),
+        
+        // Price section with discount info
+        _buildInfoRow('Harga Awal', order.formattedOriginalPrice),
+        if (order.hasDiscount) ...[
+          _buildDiscountRow(order),
+          _buildInfoRow('Harga Final', order.formattedPrice, color: const Color(0xFF22C55E)),
+        ] else
+          _buildInfoRow('Harga Final', order.formattedPrice),
+        
         if (order.catatan != null && order.catatan!.isNotEmpty)
           _buildInfoRow('Catatan Customer', order.catatan!),
-        if (order.invoiceNumber != null)
-          _buildInfoRow('Invoice', order.invoiceNumber!, color: AppTheme.primaryColor),
+        
+        // Invoice info
+        if (order.hasInvoice) ...[
+          const SizedBox(height: 8),
+          _buildInvoiceInfo(order),
+        ],
       ],
+    );
+  }
+
+  Widget _buildDiscountRow(RequestOrderModel order) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 150, child: Text('Diskon', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500))),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '-${order.formattedDiscount}',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInvoiceInfo(RequestOrderModel order) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Invoice Sudah Dibuat', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+                Text('No. Invoice: ${order.invoiceNumber}', style: TextStyle(fontSize: 13, color: Colors.green.shade600)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

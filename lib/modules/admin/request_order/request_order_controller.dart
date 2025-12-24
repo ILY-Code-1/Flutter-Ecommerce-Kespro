@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../../../services/email_service.dart';
 
 /// Enum untuk status request order
 enum RequestOrderStatus {
@@ -113,6 +114,14 @@ class RequestOrderModel {
     return 'Rp $formatted';
   }
 
+  String get formattedOriginalPrice {
+    final formatted = totalEstimation.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
   String get formattedDate {
     return DateFormat('dd MMM yyyy').format(tanggalMulai);
   }
@@ -121,6 +130,26 @@ class RequestOrderModel {
     if (catalogDetails == null || catalogDetails!.isEmpty) return '-';
     return catalogDetails!.map((c) => c['name']).join(', ');
   }
+
+  /// Check if there's a discount (finalPrice different from totalEstimation)
+  bool get hasDiscount {
+    if (finalPrice == null) return false;
+    return finalPrice != totalEstimation && finalPrice! < totalEstimation;
+  }
+
+  /// Calculate discount percentage
+  double get discountPercentage {
+    if (!hasDiscount) return 0;
+    return ((totalEstimation - finalPrice!) / totalEstimation) * 100;
+  }
+
+  String get formattedDiscount {
+    if (!hasDiscount) return '';
+    return '${discountPercentage.toStringAsFixed(1)}%';
+  }
+
+  /// Check if invoice already created
+  bool get hasInvoice => invoiceId != null && invoiceId!.isNotEmpty;
 }
 
 /// Controller untuk Request Order Admin
@@ -311,27 +340,62 @@ class RequestOrderController extends GetxController {
 
     try {
       isSaving.value = true;
+      final order = selectedOrder.value!;
 
+      // Create invoice via RPC
       await _supabase.rpc(
         'create_invoice_from_request',
-        params: {'p_request_order_id': selectedOrder.value!.id},
+        params: {'p_request_order_id': order.id},
       );
 
-      // Also create rental schedules
-      await _supabase.rpc(
-        'create_rental_schedules_from_request',
-        params: {'p_request_order_id': selectedOrder.value!.id},
-      );
+      // Refresh to get invoice number
+      await loadOrderDetail(order.id);
+      final updatedOrder = selectedOrder.value!;
 
-      _showSuccess('Invoice berhasil dibuat');
+      // Send email notification
+      if (updatedOrder.invoiceNumber != null) {
+        final emailSent = await _sendInvoiceCreatedEmail(updatedOrder);
+        if (emailSent) {
+          _showSuccess('Invoice berhasil dibuat dan email terkirim ke ${order.email}');
+        } else {
+          _showSuccess('Invoice berhasil dibuat (email gagal terkirim)');
+        }
+      } else {
+        _showSuccess('Invoice berhasil dibuat');
+      }
       
-      // Refresh
-      await loadOrderDetail(selectedOrder.value!.id);
       fetchOrders();
     } catch (e) {
       _showError('Gagal membuat invoice: $e');
     } finally {
       isSaving.value = false;
+    }
+  }
+
+  /// Send email notification after invoice created
+  Future<bool> _sendInvoiceCreatedEmail(RequestOrderModel order) async {
+    try {
+      final products = order.catalogDetails?.map((c) => c['name'].toString()).toList() ?? [];
+      
+      final htmlContent = EmailService.generateOrderConfirmationHtml(
+        orderId: order.id.substring(0, 8).toUpperCase(),
+        customerName: order.namaEO,
+        eventDate: order.formattedDate,
+        eventLocation: order.lokasi,
+        durasi: order.durasi,
+        products: products,
+        totalEstimation: order.formattedPrice,
+        invoiceNumber: order.invoiceNumber ?? '-',
+      );
+
+      return await EmailService.sendEmail(
+        recipient: order.email,
+        subject: 'Invoice ${order.invoiceNumber} - Kespro Event Hub',
+        bodyHtml: htmlContent,
+      );
+    } catch (e) {
+      debugPrint('Error sending email: $e');
+      return false;
     }
   }
 
@@ -362,7 +426,13 @@ class RequestOrderController extends GetxController {
             pw.SizedBox(height: 5),
             pw.Text(order.catalogNames),
             pw.SizedBox(height: 10),
-            _buildPdfRow('Total Estimasi', order.formattedPrice),
+            _buildPdfRow('Harga Awal', order.formattedOriginalPrice),
+            if (order.hasDiscount) ...[
+              _buildPdfRow('Diskon', '${order.formattedDiscount} (${order.formattedPrice})'),
+              _buildPdfRow('Harga Final', order.formattedPrice),
+            ] else ...[
+              _buildPdfRow('Harga Final', order.formattedPrice),
+            ],
             if (order.catatan != null && order.catatan!.isNotEmpty) ...[
               pw.SizedBox(height: 10),
               pw.Text('Catatan Customer:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
@@ -455,7 +525,12 @@ class RequestOrderController extends GetxController {
 
   void goBack() {
     selectedOrder.value = null;
-    Get.back();
+    // Use offNamed to clear stack and go back to dashboard
+    Get.until((route) => route.settings.name == '/admin/dashboard' || route.isFirst);
+  }
+
+  void clearSelection() {
+    selectedOrder.value = null;
   }
 
   /// Status colors

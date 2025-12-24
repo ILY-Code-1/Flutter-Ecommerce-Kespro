@@ -37,6 +37,7 @@ class OrderController extends GetxController {
     '2-3 Hari',
     '1 Minggu',
     'Lebih dari 1 Minggu',
+    'Barang Sekali Pakai',
   ];
 
   @override

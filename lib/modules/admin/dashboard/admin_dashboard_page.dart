@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../../themes/app_theme.dart';
 import '../../../data/models/catalog_model.dart';
 import 'admin_dashboard_controller.dart';
@@ -102,6 +103,8 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context, isMobile, 'Dashboard', 'Selamat datang di admin panel'),
+          // Month filter and refresh
+          _buildDashboardActions(isMobile),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 16 : 32),
@@ -117,6 +120,53 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardActions(bool isMobile) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Month filter
+          Obx(() => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<DateTime?>(
+                value: controller.selectedMonth.value,
+                hint: const Text('Pilih Bulan'),
+                items: List.generate(12, (i) {
+                  final date = DateTime(DateTime.now().year, DateTime.now().month - i);
+                  return DropdownMenuItem(
+                    value: date,
+                    child: Text(DateFormat('MMMM yyyy').format(date)),
+                  );
+                }),
+                onChanged: controller.changeMonth,
+              ),
+            ),
+          )),
+          // Refresh button
+          Obx(() => ElevatedButton.icon(
+            onPressed: controller.isLoadingStats.value ? null : controller.refreshDashboard,
+            icon: controller.isLoadingStats.value
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.refresh, size: 18, color: Colors.white),
+            label: Text(isMobile ? '' : 'Refresh', style: const TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          )),
         ],
       ),
     );
@@ -242,6 +292,8 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context, isMobile, 'Request Order', 'Kelola permintaan order'),
+          // Filter & Actions Bar
+          _buildOrderFilterBar(orderController, isMobile),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 16 : 32),
@@ -253,16 +305,120 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 15, offset: const Offset(0, 5))],
                 ),
                 child: Obx(() {
+                  if (orderController.isLoading.value) {
+                    return const Center(child: Padding(padding: EdgeInsets.all(48), child: CircularProgressIndicator()));
+                  }
                   if (orderController.orders.isEmpty) {
                     return _buildEmptyState('Request Order', Icons.receipt_long_rounded);
                   }
-                  return _buildOrderTable(orderController, isMobile);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Summary
+                      _buildOrderSummary(orderController),
+                      const SizedBox(height: 16),
+                      _buildOrderTable(orderController, isMobile),
+                    ],
+                  );
                 }),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrderFilterBar(RequestOrderController orderController, bool isMobile) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32, vertical: 12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.spaceBetween,
+        children: [
+          // Month Filter
+          Obx(() => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<DateTime?>(
+                value: orderController.selectedMonth.value,
+                hint: const Text('Filter Bulan'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Semua Bulan')),
+                  ...List.generate(12, (i) {
+                    final date = DateTime(DateTime.now().year, DateTime.now().month - i);
+                    return DropdownMenuItem(value: date, child: Text(DateFormat('MMMM yyyy').format(date)));
+                  }),
+                ],
+                onChanged: orderController.filterByMonth,
+              ),
+            ),
+          )),
+          // Actions
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: orderController.fetchOrders,
+                tooltip: 'Refresh',
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: orderController.downloadAllOrdersPdf,
+                icon: const Icon(Icons.picture_as_pdf, size: 18, color: Colors.white),
+                label: const Text('Download PDF', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderSummary(RequestOrderController orderController) {
+    final total = orderController.orders.length;
+    final masuk = orderController.orders.where((o) => o.status == RequestOrderStatus.masuk).length;
+    final negosiasi = orderController.orders.where((o) => o.status == RequestOrderStatus.negosiasi).length;
+    final deal = orderController.orders.where((o) => o.status == RequestOrderStatus.deal).length;
+    final ditolak = orderController.orders.where((o) => o.status == RequestOrderStatus.ditolak).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F9FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildSummaryItem('Total', total.toString(), Colors.grey.shade700),
+          _buildSummaryItem('Masuk', masuk.toString(), const Color(0xFF3B82F6)),
+          _buildSummaryItem('Negosiasi', negosiasi.toString(), const Color(0xFFF59E0B)),
+          _buildSummaryItem('Deal', deal.toString(), const Color(0xFF22C55E)),
+          _buildSummaryItem('Ditolak', ditolak.toString(), const Color(0xFFEF4444)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+      ],
     );
   }
 
@@ -342,6 +498,8 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context, isMobile, 'Invoice', 'Kelola invoice pelanggan'),
+          // Filter & Actions Bar
+          _buildInvoiceFilterBar(invoiceController, isMobile),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 16 : 32),
@@ -352,37 +510,110 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 15, offset: const Offset(0, 5))],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, color: Colors.blue.shade600, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Daftar invoice untuk konfirmasi pembayaran via WhatsApp.',
-                              style: TextStyle(fontSize: 13, color: Colors.blue.shade700),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Obx(() {
-                      if (invoiceController.invoices.isEmpty) {
-                        return _buildEmptyState('Invoice', Icons.receipt_rounded);
-                      }
-                      return _buildInvoiceTable(invoiceController, isMobile);
-                    }),
-                  ],
-                ),
+                child: Obx(() {
+                  if (invoiceController.isLoading.value) {
+                    return const Center(child: Padding(padding: EdgeInsets.all(48), child: CircularProgressIndicator()));
+                  }
+                  if (invoiceController.invoices.isEmpty) {
+                    return _buildEmptyState('Invoice', Icons.receipt_rounded);
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Summary
+                      _buildInvoiceSummary(invoiceController),
+                      const SizedBox(height: 16),
+                      _buildInvoiceTable(invoiceController, isMobile),
+                    ],
+                  );
+                }),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInvoiceFilterBar(InvoiceUIController invoiceController, bool isMobile) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32, vertical: 12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.spaceBetween,
+        children: [
+          // Month Filter
+          Obx(() => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<DateTime?>(
+                value: invoiceController.selectedMonth.value,
+                hint: const Text('Filter Bulan'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Semua Bulan')),
+                  ...List.generate(12, (i) {
+                    final date = DateTime(DateTime.now().year, DateTime.now().month - i);
+                    return DropdownMenuItem(value: date, child: Text(DateFormat('MMMM yyyy').format(date)));
+                  }),
+                ],
+                onChanged: invoiceController.filterByMonth,
+              ),
+            ),
+          )),
+          // Actions
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: invoiceController.fetchInvoices,
+                tooltip: 'Refresh',
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: invoiceController.downloadAllInvoicesPdf,
+                icon: const Icon(Icons.picture_as_pdf, size: 18, color: Colors.white),
+                label: const Text('Download PDF', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInvoiceSummary(InvoiceUIController invoiceController) {
+    final total = invoiceController.invoices.length;
+    final belumBayar = invoiceController.invoices.where((i) => i.paymentStatus == InvoicePaymentStatus.belumBayar).length;
+    final sudahDp = invoiceController.invoices.where((i) => i.paymentStatus == InvoicePaymentStatus.sudahDp).length;
+    final lunas = invoiceController.invoices.where((i) => i.paymentStatus == InvoicePaymentStatus.lunas).length;
+    final totalAmount = invoiceController.invoices.fold<double>(0, (sum, i) => sum + i.totalAmount);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F9FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildSummaryItem('Total', total.toString(), Colors.grey.shade700),
+          _buildSummaryItem('Belum Bayar', belumBayar.toString(), const Color(0xFFEF4444)),
+          _buildSummaryItem('Sudah DP', sudahDp.toString(), const Color(0xFFF59E0B)),
+          _buildSummaryItem('Lunas', lunas.toString(), const Color(0xFF22C55E)),
+          _buildSummaryItem('Nilai Total', 'Rp ${(totalAmount / 1000000).toStringAsFixed(1)}jt', AppTheme.primaryColor),
         ],
       ),
     );
@@ -649,64 +880,70 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
   }
 
   Widget _buildStatCards(bool isMobile) {
-    final stats = [
-      _StatData(
-        value: '14',
-        label: 'Total Orderan',
-        icon: Icons.shopping_bag_rounded,
-        color: const Color(0xFF4F46E5),
-        bgColor: const Color(0xFFEEF2FF),
-      ),
-      _StatData(
-        value: '4',
-        label: 'Menunggu',
-        icon: Icons.hourglass_top_rounded,
-        color: const Color(0xFFF59E0B),
-        bgColor: const Color(0xFFFEF3C7),
-      ),
-      _StatData(
-        value: '10',
-        label: 'Selesai',
-        icon: Icons.check_circle_rounded,
-        color: const Color(0xFF10B981),
-        bgColor: const Color(0xFFD1FAE5),
-      ),
-      _StatData(
-        value: '3',
-        label: 'Produk Aktif',
-        icon: Icons.inventory_2_rounded,
-        color: const Color(0xFFEC4899),
-        bgColor: const Color(0xFFFCE7F3),
-      ),
-    ];
+    return Obx(() {
+      if (controller.isLoadingStats.value) {
+        return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()));
+      }
 
-    if (isMobile) {
-      return Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: _buildStatCard(stats[0])),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard(stats[1])),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _buildStatCard(stats[2])),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard(stats[3])),
-            ],
-          ),
-        ],
+      final stats = [
+        _StatData(
+          value: controller.totalOrders.value.toString(),
+          label: 'Total Orderan',
+          icon: Icons.shopping_bag_rounded,
+          color: const Color(0xFF4F46E5),
+          bgColor: const Color(0xFFEEF2FF),
+        ),
+        _StatData(
+          value: controller.pendingOrders.value.toString(),
+          label: 'Menunggu',
+          icon: Icons.hourglass_top_rounded,
+          color: const Color(0xFFF59E0B),
+          bgColor: const Color(0xFFFEF3C7),
+        ),
+        _StatData(
+          value: controller.completedOrders.value.toString(),
+          label: 'Selesai (Deal)',
+          icon: Icons.check_circle_rounded,
+          color: const Color(0xFF10B981),
+          bgColor: const Color(0xFFD1FAE5),
+        ),
+        _StatData(
+          value: controller.totalActiveCatalogs.value.toString(),
+          label: 'Produk Aktif',
+          icon: Icons.inventory_2_rounded,
+          color: const Color(0xFFEC4899),
+          bgColor: const Color(0xFFFCE7F3),
+        ),
+      ];
+
+      if (isMobile) {
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: _buildStatCard(stats[0])),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard(stats[1])),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _buildStatCard(stats[2])),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard(stats[3])),
+              ],
+            ),
+          ],
+        );
+      }
+
+      return Wrap(
+        spacing: 20,
+        runSpacing: 20,
+        children: stats.map((stat) => _buildStatCard(stat)).toList(),
       );
-    }
-
-    return Wrap(
-      spacing: 20,
-      runSpacing: 20,
-      children: stats.map((stat) => _buildStatCard(stat)).toList(),
-    );
+    });
   }
 
   Widget _buildStatCard(_StatData stat) {
@@ -763,30 +1000,6 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
   }
 
   Widget _buildRecentActivity(bool isMobile) {
-    final activities = [
-      _ActivityData(
-        title: 'Pesanan baru #1024',
-        subtitle: 'Sewa Tenda untuk acara pernikahan',
-        time: '5 menit yang lalu',
-        icon: Icons.add_shopping_cart_rounded,
-        color: const Color(0xFF4F46E5),
-      ),
-      _ActivityData(
-        title: 'Pembayaran diterima',
-        subtitle: 'Invoice #INV-2024-001 telah lunas',
-        time: '1 jam yang lalu',
-        icon: Icons.payment_rounded,
-        color: const Color(0xFF10B981),
-      ),
-      _ActivityData(
-        title: 'Penyewaan selesai',
-        subtitle: 'Order #1020 dikembalikan',
-        time: '3 jam yang lalu',
-        icon: Icons.check_circle_outline_rounded,
-        color: const Color(0xFFF59E0B),
-      ),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -801,54 +1014,75 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                 color: Color(0xFF2D3748),
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                'Lihat Semua',
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            TextButton.icon(
+              onPressed: controller.fetchActivities,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Refresh'),
+              style: TextButton.styleFrom(foregroundColor: AppTheme.primaryColor),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
+        Obx(() {
+          if (controller.isLoadingActivities.value) {
+            return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()));
+          }
+
+          if (controller.activities.isEmpty) {
+            return Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
-          ),
-          child: Column(
-            children: activities.asMap().entries.map((entry) {
-              final index = entry.key;
-              final activity = entry.value;
-              return Column(
-                children: [
-                  _buildActivityItem(activity),
-                  if (index < activities.length - 1)
-                    Divider(
-                      height: 1,
-                      color: Colors.grey.shade200,
-                      indent: 68,
-                    ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox_rounded, size: 48, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    Text('Belum ada aktivitas', style: TextStyle(color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              children: controller.activities.asMap().entries.map((entry) {
+                final index = entry.key;
+                final activity = entry.value;
+                return Column(
+                  children: [
+                    _buildActivityItemFromData(activity),
+                    if (index < controller.activities.length - 1)
+                      Divider(
+                        height: 1,
+                        color: Colors.grey.shade200,
+                        indent: 68,
+                      ),
+                  ],
+                );
+              }).toList(),
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildActivityItem(_ActivityData activity) {
+  Widget _buildActivityItemFromData(ActivityItem activity) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -857,12 +1091,12 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: activity.color.withValues(alpha: 0.1),
+              color: activity.iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               activity.icon,
-              color: activity.color,
+              color: activity.iconColor,
               size: 22,
             ),
           ),
@@ -881,17 +1115,19 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  activity.subtitle,
+                  activity.description,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           Text(
-            activity.time,
+            activity.formattedTime,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade500,
@@ -919,18 +1155,4 @@ class _StatData {
   });
 }
 
-class _ActivityData {
-  final String title;
-  final String subtitle;
-  final String time;
-  final IconData icon;
-  final Color color;
 
-  _ActivityData({
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    required this.icon,
-    required this.color,
-  });
-}
