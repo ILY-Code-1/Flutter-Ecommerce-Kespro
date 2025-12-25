@@ -9,7 +9,7 @@ class EmailService {
   static const String _smtpHost = 'smtp.gmail.com';
   static const String _smtpPort = '587';
   static const String _authEmail = 'ilycode1@gmail.com';
-  static const String _authPassword = 'keyt ttxo bqih wgf';
+  static const String _authPassword = 'xmmr swyv zbej wckn';
   static const String _senderName = 'Kespro Event Hub';
 
   /// Kirim email menggunakan OMailer API
