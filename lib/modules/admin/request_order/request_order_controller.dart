@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,6 +29,55 @@ enum RequestOrderStatus {
   }
 }
 
+/// Model untuk item dalam request order
+class RequestOrderItem {
+  final String catalogId;
+  final String name;
+  final double originalPrice;
+  final double finalPrice;
+
+  RequestOrderItem({
+    required this.catalogId,
+    required this.name,
+    required this.originalPrice,
+    required this.finalPrice,
+  });
+
+  factory RequestOrderItem.fromJson(Map<String, dynamic> json) {
+    return RequestOrderItem(
+      catalogId: json['catalog_id'] ?? json['id'] ?? '',
+      name: json['name'] ?? '',
+      originalPrice: (json['original_price'] as num?)?.toDouble() ?? 0,
+      finalPrice: (json['final_price'] as num?)?.toDouble() ?? (json['original_price'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'catalog_id': catalogId,
+      'name': name,
+      'original_price': originalPrice,
+      'final_price': finalPrice,
+    };
+  }
+
+  String get formattedOriginalPrice {
+    final formatted = originalPrice.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
+  String get formattedFinalPrice {
+    final formatted = finalPrice.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+}
+
 /// Model untuk Request Order
 class RequestOrderModel {
   final String id;
@@ -38,14 +88,11 @@ class RequestOrderModel {
   final String lokasi;
   final String durasi;
   final String? catatan;
-  final List<String> catalogIds;
-  final double totalEstimation;
-  final double? finalPrice;
+  final List<RequestOrderItem> items;
   final String? adminNotes;
   final String? productNotes;
   final RequestOrderStatus status;
   final DateTime createdAt;
-  final List<Map<String, dynamic>>? catalogDetails;
   final String? invoiceId;
   final String? invoiceNumber;
 
@@ -58,29 +105,37 @@ class RequestOrderModel {
     required this.lokasi,
     required this.durasi,
     this.catatan,
-    required this.catalogIds,
-    required this.totalEstimation,
-    this.finalPrice,
+    required this.items,
     this.adminNotes,
     this.productNotes,
     required this.status,
     required this.createdAt,
-    this.catalogDetails,
     this.invoiceId,
     this.invoiceNumber,
   });
 
   factory RequestOrderModel.fromJson(Map<String, dynamic> json) {
-    List<String> catalogIds = [];
-    if (json['catalog_ids'] != null) {
-      catalogIds = (json['catalog_ids'] as List).map((e) => e.toString()).toList();
-    }
-
-    List<Map<String, dynamic>>? catalogDetails;
-    if (json['catalog_details'] != null && json['catalog_details'] is List) {
-      catalogDetails = (json['catalog_details'] as List)
-          .map((e) => e as Map<String, dynamic>)
-          .toList();
+    List<RequestOrderItem> items = [];
+    
+    // Parse catalog_items from JSON string or array
+    if (json['catalog_items'] != null) {
+      dynamic catalogItems = json['catalog_items'];
+      
+      // If it's a string, parse it as JSON
+      if (catalogItems is String) {
+        try {
+          final decoded = jsonDecode(catalogItems);
+          if (decoded is List) {
+            items = decoded.map((e) => RequestOrderItem.fromJson(e as Map<String, dynamic>)).toList();
+          }
+        } catch (e) {
+          debugPrint('Error parsing catalog_items JSON string: $e');
+        }
+      } 
+      // If it's already a list, use it directly
+      else if (catalogItems is List) {
+        items = catalogItems.map((e) => RequestOrderItem.fromJson(e as Map<String, dynamic>)).toList();
+      }
     }
 
     return RequestOrderModel(
@@ -92,30 +147,35 @@ class RequestOrderModel {
       lokasi: json['lokasi'] ?? '',
       durasi: json['durasi'] ?? '',
       catatan: json['catatan'],
-      catalogIds: catalogIds,
-      totalEstimation: (json['total_estimation'] as num?)?.toDouble() ?? 0,
-      finalPrice: (json['final_price'] as num?)?.toDouble(),
+      items: items,
       adminNotes: json['admin_notes'],
       productNotes: json['product_notes'],
       status: RequestOrderStatus.fromString(json['status'] ?? 'masuk'),
       createdAt: DateTime.parse(json['created_at']),
-      catalogDetails: catalogDetails,
       invoiceId: json['invoice_id'],
       invoiceNumber: json['invoice_number'],
     );
   }
 
-  String get formattedPrice {
-    final price = finalPrice ?? totalEstimation;
-    final formatted = price.toStringAsFixed(0).replaceAllMapped(
+  /// Calculate total from items
+  double get totalOriginalPrice {
+    return items.fold(0, (sum, item) => sum + item.originalPrice);
+  }
+
+  double get totalFinalPrice {
+    return items.fold(0, (sum, item) => sum + item.finalPrice);
+  }
+
+  String get formattedOriginalPrice {
+    final formatted = totalOriginalPrice.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]}.',
     );
     return 'Rp $formatted';
   }
 
-  String get formattedOriginalPrice {
-    final formatted = totalEstimation.toStringAsFixed(0).replaceAllMapped(
+  String get formattedPrice {
+    final formatted = totalFinalPrice.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]}.',
     );
@@ -127,25 +187,13 @@ class RequestOrderModel {
   }
 
   String get catalogNames {
-    if (catalogDetails == null || catalogDetails!.isEmpty) return '-';
-    return catalogDetails!.map((c) => c['name']).join(', ');
+    if (items.isEmpty) return '-';
+    return items.map((item) => item.name).join(', ');
   }
 
-  /// Check if there's a discount (finalPrice different from totalEstimation)
+  /// Check if there's any price difference
   bool get hasDiscount {
-    if (finalPrice == null) return false;
-    return finalPrice != totalEstimation && finalPrice! < totalEstimation;
-  }
-
-  /// Calculate discount percentage
-  double get discountPercentage {
-    if (!hasDiscount) return 0;
-    return ((totalEstimation - finalPrice!) / totalEstimation) * 100;
-  }
-
-  String get formattedDiscount {
-    if (!hasDiscount) return '';
-    return '${discountPercentage.toStringAsFixed(1)}%';
+    return totalFinalPrice < totalOriginalPrice;
   }
 
   /// Check if invoice already created
@@ -167,9 +215,12 @@ class RequestOrderController extends GetxController {
 
   // Form controllers for editing
   final selectedStatus = Rxn<RequestOrderStatus>();
-  final finalPriceController = TextEditingController();
   final adminNotesController = TextEditingController();
   final productNotesController = TextEditingController();
+  
+  // Per-item price controllers
+  final itemPriceControllers = <TextEditingController>[].obs;
+  final editableItems = <RequestOrderItem>[].obs;
 
   // Saving state
   final isSaving = false.obs;
@@ -182,10 +233,17 @@ class RequestOrderController extends GetxController {
 
   @override
   void onClose() {
-    finalPriceController.dispose();
+    _disposeItemControllers();
     adminNotesController.dispose();
     productNotesController.dispose();
     super.onClose();
+  }
+
+  void _disposeItemControllers() {
+    for (var controller in itemPriceControllers) {
+      controller.dispose();
+    }
+    itemPriceControllers.clear();
   }
 
   /// Fetch all orders from Supabase
@@ -242,7 +300,7 @@ class RequestOrderController extends GetxController {
     try {
       isLoading.value = true;
       final response = await _supabase
-          .from('v_request_orders_full')
+          .from('request_orders')
           .select()
           .eq('id', orderId)
           .single();
@@ -252,15 +310,42 @@ class RequestOrderController extends GetxController {
       // Populate form fields
       final order = selectedOrder.value!;
       selectedStatus.value = order.status;
-      finalPriceController.text = order.finalPrice?.toStringAsFixed(0) ?? 
-          order.totalEstimation.toStringAsFixed(0);
       adminNotesController.text = order.adminNotes ?? '';
       productNotesController.text = order.productNotes ?? '';
+      
+      // Initialize item controllers and editable items
+      _disposeItemControllers();
+      editableItems.assignAll(order.items);
+      
+      for (var item in order.items) {
+        final controller = TextEditingController(
+          text: item.finalPrice.toStringAsFixed(0)
+        );
+        itemPriceControllers.add(controller);
+      }
     } catch (e) {
       _showError('Gagal memuat detail: $e');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Update item price from controller
+  void updateItemPrice(int index) {
+    if (index < 0 || index >= editableItems.length) return;
+    
+    final priceText = itemPriceControllers[index].text;
+    final newPrice = double.tryParse(priceText) ?? editableItems[index].finalPrice;
+    
+    editableItems[index] = RequestOrderItem(
+      catalogId: editableItems[index].catalogId,
+      name: editableItems[index].name,
+      originalPrice: editableItems[index].originalPrice,
+      finalPrice: newPrice,
+    );
+    
+    // Trigger rebuild
+    editableItems.refresh();
   }
 
   /// Update order
@@ -270,9 +355,17 @@ class RequestOrderController extends GetxController {
     try {
       isSaving.value = true;
 
+      // Update all item prices from controllers
+      for (int i = 0; i < editableItems.length; i++) {
+        updateItemPrice(i);
+      }
+
+      // Convert items to JSON
+      final itemsJson = jsonEncode(editableItems.map((item) => item.toJson()).toList());
+
       final updates = {
         'status': selectedStatus.value?.name ?? 'masuk',
-        'final_price': double.tryParse(finalPriceController.text) ?? 0,
+        'catalog_items': itemsJson,
         'admin_notes': adminNotesController.text.isNotEmpty ? adminNotesController.text : null,
         'product_notes': productNotesController.text.isNotEmpty ? productNotesController.text : null,
       };
@@ -375,7 +468,12 @@ class RequestOrderController extends GetxController {
   /// Send email notification after invoice created
   Future<bool> _sendInvoiceCreatedEmail(RequestOrderModel order) async {
     try {
-      final products = order.catalogDetails?.map((c) => c['name'].toString()).toList() ?? [];
+      // Convert items to list of maps for email
+      final items = order.items.map((item) => {
+        'name': item.name,
+        'original_price': item.formattedOriginalPrice,
+        'final_price': item.formattedFinalPrice,
+      }).toList();
       
       final htmlContent = EmailService.generateOrderConfirmationHtml(
         orderId: order.id.substring(0, 8).toUpperCase(),
@@ -383,8 +481,9 @@ class RequestOrderController extends GetxController {
         eventDate: order.formattedDate,
         eventLocation: order.lokasi,
         durasi: order.durasi,
-        products: products,
-        totalEstimation: order.formattedPrice,
+        items: items,
+        totalOriginal: order.formattedOriginalPrice,
+        totalFinal: order.formattedPrice,
         invoiceNumber: order.invoiceNumber ?? '-',
       );
 
@@ -422,17 +521,31 @@ class RequestOrderController extends GetxController {
             pw.SizedBox(height: 10),
             pw.Divider(),
             pw.SizedBox(height: 10),
-            pw.Text('Produk:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 5),
-            pw.Text(order.catalogNames),
+            pw.Text('Produk & Harga:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+            pw.SizedBox(height: 8),
+            ...order.items.map((item) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 6),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('• ${item.name}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(left: 10),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('  Harga Awal: ${item.formattedOriginalPrice}', style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text('  Harga Final: ${item.formattedFinalPrice}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )),
             pw.SizedBox(height: 10),
-            _buildPdfRow('Harga Awal', order.formattedOriginalPrice),
-            if (order.hasDiscount) ...[
-              _buildPdfRow('Diskon', '${order.formattedDiscount} (${order.formattedPrice})'),
-              _buildPdfRow('Harga Final', order.formattedPrice),
-            ] else ...[
-              _buildPdfRow('Harga Final', order.formattedPrice),
-            ],
+            pw.Divider(),
+            _buildPdfRow('Total Harga Awal', order.formattedOriginalPrice),
+            _buildPdfRow('Total Harga Final', order.formattedPrice),
             if (order.catatan != null && order.catatan!.isNotEmpty) ...[
               pw.SizedBox(height: 10),
               pw.Text('Catatan Customer:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),

@@ -116,8 +116,8 @@ class InvoiceDetailPage extends GetView<InvoiceUIController> {
         _buildInfoRow('Produk', invoice.catalogNames),
         const Divider(height: 24),
         _buildInfoRow('Total', invoice.formattedTotal, isBold: true, color: AppTheme.primaryColor),
-        if (invoice.paidAmount > 0) _buildInfoRow('Terbayar', 'Rp ${invoice.paidAmount.toStringAsFixed(0)}'),
-        if (invoice.remainingAmount > 0) _buildInfoRow('Sisa', 'Rp ${invoice.remainingAmount.toStringAsFixed(0)}', color: Colors.red),
+        if (invoice.paidAmount > 0) _buildInfoRow('Terbayar', invoice.formattedPaidAmount),
+        if (invoice.remainingAmount > 0) _buildInfoRow('Sisa', invoice.formattedRemainingAmount, color: Colors.red),
       ],
     );
   }

@@ -52,7 +52,7 @@ class OrderPage extends GetView<OrderController> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Isi form di bawah untuk melakukan request sewa peralatan event',
+                        'Isi form di bawah untuk melakukan request order peralatan event',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -105,7 +105,7 @@ class OrderPage extends GetView<OrderController> {
                       ),
                       const SizedBox(height: 16),
                       _buildDropdown(
-                        label: 'Durasi Sewa *',
+                        label: 'Durasi Event *',
                         items: controller.durasiList,
                         onChanged: (val) => controller.durasi.value = val ?? '',
                       ),
@@ -172,7 +172,7 @@ class OrderPage extends GetView<OrderController> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pilih produk yang ingin disewa (bisa pilih lebih dari satu)',
+          'Pilih produk yang ingin dipesan (bisa pilih lebih dari satu)',
           style: TextStyle(
             fontSize: 13,
             color: Colors.grey.shade600,
@@ -390,7 +390,7 @@ class OrderPage extends GetView<OrderController> {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
           ),
-          hint: const Text('Pilih durasi sewa'),
+          hint: const Text('Pilih durasi event'),
           items: items
               .map((item) => DropdownMenuItem(
                     value: item,

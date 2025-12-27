@@ -34,24 +34,54 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
 
   Widget _buildHeader(BuildContext context, bool isMobile, bool isTablet) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 32,
+        vertical: 16,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           if (isMobile || isTablet)
-            IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openDrawer()),
-          IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: controller.goBack, tooltip: 'Kembali'),
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: controller.goBack,
+            tooltip: 'Kembali',
+          ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: AppTheme.primaryColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.receipt_long_rounded, color: AppTheme.primaryColor, size: 24),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.receipt_long_rounded,
+              color: AppTheme.primaryColor,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
-          const Text('Detail Order', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+          const Text(
+            'Detail Order',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D3748),
+            ),
+          ),
         ],
       ),
     );
@@ -60,7 +90,9 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
   Widget _buildContent(bool isMobile) {
     return Obx(() {
       if (controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
+        return const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryColor),
+        );
       }
 
       final order = controller.selectedOrder.value;
@@ -77,7 +109,13 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 15, offset: const Offset(0, 5))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +140,10 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Request #${order.id.substring(0, 8).toUpperCase()}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Request #${order.id.substring(0, 8).toUpperCase()}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             _buildStatusBadge(order.status),
           ],
         ),
@@ -113,19 +154,60 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
         _buildInfoRow('Tanggal Event', order.formattedDate),
         _buildInfoRow('Lokasi', order.lokasi),
         _buildInfoRow('Durasi', order.durasi),
-        _buildInfoRow('Produk', order.catalogNames),
-        
-        // Price section with discount info
-        _buildInfoRow('Harga Awal', order.formattedOriginalPrice),
-        if (order.hasDiscount) ...[
-          _buildDiscountRow(order),
-          _buildInfoRow('Harga Final', order.formattedPrice, color: const Color(0xFF22C55E)),
-        ] else
-          _buildInfoRow('Harga Final', order.formattedPrice),
-        
+
+        // Items section
+        const SizedBox(height: 16),
+        const Text(
+          'Produk & Harga:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        ...order.items.asMap().entries.map((entry) {
+          // final index = entry.key;
+          final item = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Harga Awal: ${item.formattedOriginalPrice}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+
+        const Divider(height: 24),
+        _buildInfoRow('Total Harga Awal', order.formattedOriginalPrice),
+        _buildInfoRow('Total Harga Final', order.formattedPrice, isBold: true),
+
         if (order.catatan != null && order.catatan!.isNotEmpty)
           _buildInfoRow('Catatan Customer', order.catatan!),
-        
+
         // Invoice info
         if (order.hasInvoice) ...[
           const SizedBox(height: 8),
@@ -135,30 +217,30 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
     );
   }
 
-  Widget _buildDiscountRow(RequestOrderModel order) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 150, child: Text('Diskon', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500))),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '-${order.formattedDiscount}',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade700),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildDiscountRow(RequestOrderModel order) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 8),
+  //     child: Row(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         SizedBox(width: 150, child: Text('Diskon', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500))),
+  //         Expanded(
+  //           child: Container(
+  //             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  //             decoration: BoxDecoration(
+  //               color: Colors.red.shade50,
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: Text(
+  //               '-${order.formattedDiscount}',
+  //               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade700),
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildInvoiceInfo(RequestOrderModel order) {
     return Container(
@@ -170,14 +252,27 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 20),
+          Icon(
+            Icons.check_circle_rounded,
+            color: Colors.green.shade600,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Invoice Sudah Dibuat', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-                Text('No. Invoice: ${order.invoiceNumber}', style: TextStyle(fontSize: 13, color: Colors.green.shade600)),
+                Text(
+                  'Invoice Sudah Dibuat',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                Text(
+                  'No. Invoice: ${order.invoiceNumber}',
+                  style: TextStyle(fontSize: 13, color: Colors.green.shade600),
+                ),
               ],
             ),
           ),
@@ -186,14 +281,37 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {Color? color}) {
+  Widget _buildInfoRow(
+    String label,
+    String value, {
+    Color? color,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 150, child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500))),
-          Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: color ?? const Color(0xFF2D3748)))),
+          SizedBox(
+            width: 150,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                fontSize: isBold ? 16 : 14,
+                color: color ?? const Color(0xFF2D3748),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -202,8 +320,17 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
   Widget _buildStatusBadge(RequestOrderStatus status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: controller.getStatusBgColor(status), borderRadius: BorderRadius.circular(20)),
-      child: Text(status.label, style: TextStyle(color: controller.getStatusColor(status), fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: controller.getStatusBgColor(status),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          color: controller.getStatusColor(status),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -211,39 +338,131 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Edit Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+        const Text(
+          'Edit Data',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D3748),
+          ),
+        ),
         const SizedBox(height: 16),
 
         // Status Dropdown
         const Text('Status', style: TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
-        Obx(() => DropdownButtonFormField<RequestOrderStatus>(
-          value: controller.selectedStatus.value,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          items: RequestOrderStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))).toList(),
-          onChanged: (v) => controller.selectedStatus.value = v,
-        )),
-        const SizedBox(height: 16),
-
-        // Final Price
-        const Text('Harga Final', style: TextStyle(fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller.finalPriceController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            prefixText: 'Rp ',
+        Obx(
+          () => DropdownButtonFormField<RequestOrderStatus>(
+            value: controller.selectedStatus.value,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+            items: RequestOrderStatus.values
+                .map((s) => DropdownMenuItem(value: s, child: Text(s.label)))
+                .toList(),
+            onChanged: (v) => controller.selectedStatus.value = v,
           ),
         ),
         const SizedBox(height: 16),
 
+        // Per-item price editing
+        const Text(
+          'Edit Harga Per Item',
+          style: TextStyle(fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        Obx(
+          () => Column(
+            children: controller.editableItems.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: controller.itemPriceControllers[index],
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        prefixText: 'Rp ',
+                        hintText: 'Masukkan harga',
+                      ),
+                      onChanged: (_) => controller.updateItemPrice(index),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Total display
+        Obx(() {
+          final total = controller.editableItems.fold<double>(
+            0,
+            (sum, item) => sum + item.finalPrice,
+          );
+          final formatted = total
+              .toStringAsFixed(0)
+              .replaceAllMapped(
+                RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                (Match m) => '${m[1]}.',
+              );
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total Harga:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Rp $formatted',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
+
         // Admin Notes
-        const Text('Catatan Admin', style: TextStyle(fontWeight: FontWeight.w500)),
+        const Text(
+          'Catatan Admin',
+          style: TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller.adminNotesController,
@@ -257,7 +476,10 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
         const SizedBox(height: 16),
 
         // Product Notes
-        const Text('Keterangan Produk', style: TextStyle(fontWeight: FontWeight.w500)),
+        const Text(
+          'Keterangan Produk',
+          style: TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller.productNotesController,
@@ -278,45 +500,82 @@ class RequestOrderDetailPage extends GetView<RequestOrderController> {
       runSpacing: 12,
       children: [
         // Save Button
-        Obx(() => ElevatedButton.icon(
-          onPressed: controller.isSaving.value ? null : controller.updateOrder,
-          icon: controller.isSaving.value
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.save_rounded, color: Colors.white),
-          label: const Text('Simpan', style: TextStyle(color: Colors.white)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        Obx(
+          () => ElevatedButton.icon(
+            onPressed: controller.isSaving.value
+                ? null
+                : controller.updateOrder,
+            icon: controller.isSaving.value
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.save_rounded, color: Colors.white),
+            label: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
-        )),
+        ),
 
         // Download PDF
         ElevatedButton.icon(
           onPressed: () => controller.downloadOrderPdf(order),
           icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
-          label: const Text('Download PDF', style: TextStyle(color: Colors.white)),
+          label: const Text(
+            'Download PDF',
+            style: TextStyle(color: Colors.white),
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
 
         // Generate Invoice (only when status is deal and no invoice yet)
         if (order.status == RequestOrderStatus.deal && order.invoiceId == null)
-          Obx(() => ElevatedButton.icon(
-            onPressed: controller.isSaving.value ? null : controller.generateInvoice,
-            icon: controller.isSaving.value
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.receipt_long_rounded, color: Colors.white),
-            label: const Text('Generate Invoice', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF22C55E),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          Obx(
+            () => ElevatedButton.icon(
+              onPressed: controller.isSaving.value
+                  ? null
+                  : controller.generateInvoice,
+              icon: controller.isSaving.value
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.receipt_long_rounded, color: Colors.white),
+              label: const Text(
+                'Generate Invoice',
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF22C55E),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
-          )),
+          ),
       ],
     );
   }

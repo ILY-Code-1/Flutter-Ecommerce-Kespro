@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -154,6 +155,14 @@ class OrderController extends GetxController {
 
       final formattedWhatsapp = _formatWhatsApp(whatsappController.text);
 
+      // Prepare catalog items with prices
+      final catalogItems = selectedCatalogs.map((catalog) => {
+        'catalog_id': catalog.id,
+        'name': catalog.name,
+        'original_price': catalog.priceEstimation,
+        'final_price': catalog.priceEstimation, // Initially same as original
+      }).toList();
+
       // Prepare data
       final orderData = {
         'nama_eo': namaEOController.text.trim(),
@@ -165,8 +174,7 @@ class OrderController extends GetxController {
         'catatan': catatanController.text.trim().isNotEmpty 
             ? catatanController.text.trim() 
             : null,
-        'catalog_ids': selectedCatalogIds.toList(),
-        'total_estimation': totalEstimation,
+        'catalog_items': jsonEncode(catalogItems),
         'status': 'masuk',
       };
 

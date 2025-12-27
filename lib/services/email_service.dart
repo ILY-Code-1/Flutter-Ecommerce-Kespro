@@ -8,8 +8,8 @@ class EmailService {
   // SMTP Configuration - Ganti dengan kredensial Anda
   static const String _smtpHost = 'smtp.gmail.com';
   static const String _smtpPort = '587';
-  static const String _authEmail = 'ilycode1@gmail.com';
-  static const String _authPassword = 'xmmr swyv zbej wckn';
+  static const String _authEmail = 'azharramdhani25@gmail.com';
+  static const String _authPassword = 'btht ksde rjmw lkwr';
   static const String _senderName = 'Kespro Event Hub';
 
   /// Kirim email menggunakan OMailer API
@@ -176,12 +176,22 @@ class EmailService {
     required String eventDate,
     required String eventLocation,
     required String durasi,
-    required List<String> products,
-    required String totalEstimation,
+    required List<Map<String, String>> items,
+    required String totalOriginal,
+    required String totalFinal,
     required String invoiceNumber,
   }) {
-    final productList = products
-        .map((p) => '<li style="padding:5px 0;">$p</li>')
+    final itemsList = items
+        .map(
+          (item) =>
+              '''
+          <li style="padding:8px 0;">
+            <strong>${item['name']}</strong><br>
+            <span style="font-size:13px; color:#666;">Harga Awal: ${item['original_price']}</span><br>
+            <span style="font-size:13px; color:#667eea; font-weight:bold;">Harga Final: ${item['final_price']}</span>
+          </li>
+        ''',
+        )
         .join('');
 
     return '''
@@ -223,15 +233,22 @@ class EmailService {
                 <p style="margin:0;"><strong>Durasi:</strong> $durasi</p>
               </div>
 
-              <p style="margin:0 0 10px; font-weight:bold; color:#333;">Produk yang Disewa:</p>
-              <ul style="margin:0 0 20px; padding-left:20px; color:#666;">
-                $productList
+              <p style="margin:0 0 10px; font-weight:bold; color:#333;">Produk yang Dipesan:</p>
+              <ul style="margin:0 0 20px; padding-left:20px; color:#666; list-style:none;">
+                $itemsList
               </ul>
 
-              <div style="padding:15px; background:#e3f2fd; border-radius:8px; text-align:center;">
-                <p style="margin:0; font-size:14px; color:#1976d2;">
-                  <strong>Total:</strong> $totalEstimation
-                </p>
+              <div style="padding:15px; background:#f8f9fa; border-radius:8px;">
+                <div style="margin-bottom:8px;">
+                  <span style="color:#666;">Total Harga Awal:</span>
+                  <span style="float:right; font-weight:bold;">$totalOriginal</span>
+                </div>
+                <div style="clear:both;"></div>
+                <div style="padding-top:8px; border-top:1px solid #dee2e6;">
+                  <span style="font-weight:bold; color:#1976d2;">Total Harga Final:</span>
+                  <span style="float:right; font-weight:bold; color:#1976d2; font-size:16px;">$totalFinal</span>
+                </div>
+                <div style="clear:both;"></div>
               </div>
             </td>
           </tr>

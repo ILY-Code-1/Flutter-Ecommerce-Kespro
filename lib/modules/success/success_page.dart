@@ -11,7 +11,7 @@ class SuccessPage extends StatelessWidget {
   const SuccessPage({super.key});
 
   // GANTI DENGAN NOMOR WHATSAPP ADMIN ANDA (format: 62xxx tanpa +)
-  static const String adminWhatsApp = '6285178226071';
+  static const String adminWhatsApp = '6282258532988';
 
   @override
   Widget build(BuildContext context) {
