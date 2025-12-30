@@ -95952,7 +95952,7 @@ var $async$oM=B.p(function(a1,a2){if(a1===1){p.push(a2)
 s=q}while(true)switch(s){case 0:q=3
 n.ch.sl(!0)
 s=6
-return B.o(n.ax.ej("request_orders").jq().oA("id",a0).vq(0),$async$oM)
+return B.o(n.ax.ej("v_request_orders_full").jq().oA("id",a0).vq(0),$async$oM)
 case 6:m=a2
 h=n.CW
 h.sl(B.aSM(m))

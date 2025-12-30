@@ -31,8 +31,22 @@
 
   <title>Kespro Event Hub</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      overscroll-behavior-x: none;
+    }
+  </style>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    if ('navigation' in window) {
+      navigation.addEventListener("navigate", (event) => {
+        if (event.navigationType === "traverse") {
+          event.preventDefault();
+        }
+      });
+    }
+  </script>
 </body>
 </html>
