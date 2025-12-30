@@ -300,7 +300,7 @@ class RequestOrderController extends GetxController {
     try {
       isLoading.value = true;
       final response = await _supabase
-          .from('request_orders')
+          .from('v_request_orders_full')
           .select()
           .eq('id', orderId)
           .single();
