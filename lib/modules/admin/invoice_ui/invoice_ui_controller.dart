@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -84,10 +85,28 @@ class InvoiceModel {
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
     List<Map<String, dynamic>>? catalogDetails;
-    if (json['catalog_details'] != null && json['catalog_details'] is List) {
-      catalogDetails = (json['catalog_details'] as List)
-          .map((e) => e as Map<String, dynamic>)
-          .toList();
+    
+    // Try to parse catalog_details or catalog_items
+    dynamic catalogData = json['catalog_details'] ?? json['catalog_items'];
+    
+    if (catalogData != null) {
+      if (catalogData is List) {
+        catalogDetails = catalogData
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+      } else if (catalogData is String) {
+        // If it's a JSON string, decode it first
+        try {
+          final decoded = jsonDecode(catalogData);
+          if (decoded is List) {
+            catalogDetails = decoded
+                .map((e) => e as Map<String, dynamic>)
+                .toList();
+          }
+        } catch (e) {
+          debugPrint('Error parsing catalog data: $e');
+        }
+      }
     }
 
     return InvoiceModel(
@@ -130,6 +149,43 @@ class InvoiceModel {
   String get catalogNames {
     if (catalogDetails == null || catalogDetails!.isEmpty) return '-';
     return catalogDetails!.map((c) => c['name']).join(', ');
+  }
+
+  /// Get formatted price for a catalog item
+  String formatPrice(double price) {
+    final formatted = price.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
+  /// Get list of catalog items with price details
+  List<Map<String, dynamic>> get catalogItemsWithPrice {
+    if (catalogDetails == null || catalogDetails!.isEmpty) {
+      debugPrint('⚠️ catalogDetails is null or empty');
+      return [];
+    }
+    
+    debugPrint('✅ catalogDetails found: ${catalogDetails!.length} items');
+    
+    return catalogDetails!.map((item) {
+      // Debug log untuk setiap item
+      debugPrint('Item: ${item['name']}, original: ${item['original_price']}, final: ${item['final_price']}');
+      
+      // Get prices, jika final_price tidak ada gunakan original_price
+      final originalPrice = (item['original_price'] as num?)?.toDouble() ?? 
+                           (item['price_estimation'] as num?)?.toDouble() ?? 0;
+      final finalPrice = (item['final_price'] as num?)?.toDouble() ?? originalPrice;
+      
+      return {
+        'name': item['name'] ?? '-',
+        'original_price': originalPrice,
+        'final_price': finalPrice,
+        'formatted_original_price': formatPrice(originalPrice),
+        'formatted_final_price': formatPrice(finalPrice),
+      };
+    }).toList();
   }
 
   double get remainingAmount => totalAmount - paidAmount;
@@ -236,16 +292,44 @@ class InvoiceUIController extends GetxController {
   Future<void> loadInvoiceDetail(String invoiceId) async {
     try {
       isLoading.value = true;
-      final response = await _supabase
+      
+      // Fetch invoice data
+      final invoiceResponse = await _supabase
           .from('v_invoices_full')
           .select()
           .eq('id', invoiceId)
           .single();
+      
+      // Fetch catalog items from request_orders
+      if (invoiceResponse['request_order_id'] != null) {
+        try {
+          final requestOrderResponse = await _supabase
+              .from('request_orders')
+              .select('catalog_items')
+              .eq('id', invoiceResponse['request_order_id'])
+              .single();
+          
+          // Merge catalog_items into invoice response
+          if (requestOrderResponse['catalog_items'] != null) {
+            invoiceResponse['catalog_items'] = requestOrderResponse['catalog_items'];
+            debugPrint('✅ catalog_items loaded: ${requestOrderResponse['catalog_items']}');
+          } else {
+            debugPrint('⚠️ catalog_items is null from request_orders');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error fetching catalog_items: $e');
+        }
+      }
 
-      selectedInvoice.value = InvoiceModel.fromJson(response);
+      selectedInvoice.value = InvoiceModel.fromJson(invoiceResponse);
       selectedStatus.value = selectedInvoice.value!.paymentStatus;
+      
+      // Debug log
+      debugPrint('Invoice loaded: ${selectedInvoice.value!.invoiceNumber}');
+      debugPrint('catalogDetails count: ${selectedInvoice.value!.catalogDetails?.length ?? 0}');
     } catch (e) {
       _showError('Gagal memuat detail: $e');
+      debugPrint('❌ Error loading invoice: $e');
     } finally {
       isLoading.value = false;
     }
@@ -359,17 +443,72 @@ class InvoiceUIController extends GetxController {
             pw.SizedBox(height: 10),
             pw.Text('Items:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 10),
-            if (invoice.catalogDetails != null)
-              ...invoice.catalogDetails!.map((c) => pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(c['name'] ?? ''),
-                    pw.Text('Rp ${(c['price_estimation'] as num?)?.toStringAsFixed(0) ?? '0'}'),
-                  ],
-                ),
-              )),
+            // Product table
+            if (invoice.catalogItemsWithPrice.isNotEmpty)
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(3),
+                  1: const pw.FlexColumnWidth(2),
+                  2: const pw.FlexColumnWidth(2),
+                },
+                children: [
+                  // Header
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Nama Produk', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Harga Awal', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Harga Final', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                      ),
+                    ],
+                  ),
+                  // Items
+                  ...invoice.catalogItemsWithPrice.map((item) {
+                    final hasDiscount = item['final_price'] < item['original_price'];
+                    return pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(item['name'], style: const pw.TextStyle(fontSize: 11)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            item['formatted_original_price'],
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              color: hasDiscount ? PdfColors.grey : PdfColors.black,
+                              decoration: hasDiscount ? pw.TextDecoration.lineThrough : null,
+                            ),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                            item['formatted_final_price'],
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              fontWeight: pw.FontWeight.bold,
+                              color: hasDiscount ? PdfColors.green : PdfColors.black,
+                            ),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
             pw.SizedBox(height: 20),
             pw.Divider(),
             pw.SizedBox(height: 10),
@@ -509,11 +648,13 @@ class InvoiceUIController extends GetxController {
     try {
       isSaving.value = true;
 
-      // Prepare items for email template
-      final items = invoice.catalogDetails?.map((c) => {
-        'name': c['name'] ?? '',
-        'price': (c['price_estimation'] as num?)?.toStringAsFixed(0) ?? '0',
-      }).toList() ?? [];
+      // Prepare items for email template with price details
+      final items = invoice.catalogItemsWithPrice.map((item) => {
+        'name': item['name'] ?? '',
+        'original_price': item['formatted_original_price'],
+        'final_price': item['formatted_final_price'],
+        'has_discount': item['final_price'] < item['original_price'],
+      }).toList();
 
       final htmlContent = EmailService.generateInvoiceEmailHtml(
         invoiceNumber: invoice.invoiceNumber,

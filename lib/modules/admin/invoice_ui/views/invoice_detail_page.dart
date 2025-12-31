@@ -113,11 +113,165 @@ class InvoiceDetailPage extends GetView<InvoiceUIController> {
         if (invoice.eventDate != null) _buildInfoRow('Tanggal Event', invoice.formattedDate),
         if (invoice.eventLocation != null) _buildInfoRow('Lokasi', invoice.eventLocation!),
         if (invoice.durasi != null) _buildInfoRow('Durasi', invoice.durasi!),
-        _buildInfoRow('Produk', invoice.catalogNames),
+        const SizedBox(height: 16),
+        _buildProductDetails(invoice, isMobile),
         const Divider(height: 24),
         _buildInfoRow('Total', invoice.formattedTotal, isBold: true, color: AppTheme.primaryColor),
         if (invoice.paidAmount > 0) _buildInfoRow('Terbayar', invoice.formattedPaidAmount),
-        if (invoice.remainingAmount > 0) _buildInfoRow('Sisa', invoice.formattedRemainingAmount, color: Colors.red),
+      ],
+    );
+  }
+
+  Widget _buildProductDetails(InvoiceModel invoice, bool isMobile) {
+    final items = invoice.catalogItemsWithPrice;
+    
+    if (items.isEmpty) {
+      return _buildInfoRow('Produk', '-');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Detail Produk',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Nama Produk',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    if (!isMobile)
+                      const Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Harga Awal',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    const Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Harga Final',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Items
+              ...items.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final isLast = index == items.length - 1;
+                final hasDiscount = item['final_price'] < item['original_price'];
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: isLast ? null : Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              item['name'],
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2D3748),
+                              ),
+                            ),
+                          ),
+                          if (!isMobile)
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                item['formatted_original_price'],
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: hasDiscount ? Colors.grey.shade500 : const Color(0xFF2D3748),
+                                  decoration: hasDiscount ? TextDecoration.lineThrough : null,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              item['formatted_final_price'],
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: hasDiscount ? Colors.green.shade700 : AppTheme.primaryColor,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Show original price below on mobile if discounted
+                      if (isMobile && hasDiscount) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Harga Awal: ${item['formatted_original_price']}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
       ],
     );
   }

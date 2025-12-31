@@ -58,13 +58,16 @@ class EmailService {
   }) {
     final itemRows = items
         .map(
-          (item) =>
-              '''
+          (item) {
+            final hasDiscount = item['has_discount'] ?? false;
+            return '''
       <tr>
         <td style="padding:10px; border-bottom:1px solid #eee;">${item['name']}</td>
-        <td style="padding:10px; border-bottom:1px solid #eee; text-align:right;">Rp ${item['price']}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee; text-align:right; color:#999; ${hasDiscount ? 'text-decoration:line-through;' : ''}">${item['original_price']}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:${hasDiscount ? '#22c55e' : '#333'};">${item['final_price']}</td>
       </tr>
-    ''',
+    ''';
+          },
         )
         .join('');
 
@@ -118,7 +121,8 @@ class EmailService {
               <table style="width:100%; border-collapse:collapse;">
                 <tr style="background:#f8f9fa;">
                   <th style="padding:12px; text-align:left; font-weight:600; color:#333;">Item</th>
-                  <th style="padding:12px; text-align:right; font-weight:600; color:#333;">Harga</th>
+                  <th style="padding:12px; text-align:right; font-weight:600; color:#333;">Harga Awal</th>
+                  <th style="padding:12px; text-align:right; font-weight:600; color:#333;">Harga Final</th>
                 </tr>
                 $itemRows
               </table>
