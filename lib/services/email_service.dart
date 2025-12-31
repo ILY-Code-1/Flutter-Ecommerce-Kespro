@@ -50,6 +50,9 @@ class EmailService {
     required String eventLocation,
     required String durasi,
     required List<Map<String, dynamic>> items,
+    required String totalOriginalPrice,
+    required String totalFinalPrice,
+    required bool hasPriceDifference,
     required String subtotal,
     required String discount,
     required String total,
@@ -70,6 +73,22 @@ class EmailService {
           },
         )
         .join('');
+
+    final priceSummaryRows = hasPriceDifference
+        ? '''
+      <tr>
+        <td style="padding:8px 10px; text-align:right; color:#666; font-size:13px;">Total Harga Awal:</td>
+        <td style="padding:8px 10px; text-align:right; width:150px; color:#999; text-decoration:line-through; font-size:13px;">$totalOriginalPrice</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px; text-align:right; font-weight:bold; font-size:14px;">Total Harga Final:</td>
+        <td style="padding:8px 10px; text-align:right; font-weight:bold; color:#22c55e; font-size:14px;">$totalFinalPrice</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:10px 0;"><hr style="border:none; border-top:1px solid #ddd; margin:0;"></td>
+      </tr>
+    '''
+        : '';
 
     final discountRow = hasDiscount
         ? '''
@@ -133,6 +152,7 @@ class EmailService {
           <tr>
             <td style="padding:25px;">
               <table style="width:100%; border-collapse:collapse;">
+                $priceSummaryRows
                 <tr>
                   <td style="padding:10px; text-align:right;">Subtotal:</td>
                   <td style="padding:10px; text-align:right; width:150px;">$subtotal</td>

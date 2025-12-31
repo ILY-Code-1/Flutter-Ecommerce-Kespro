@@ -227,6 +227,48 @@ class InvoiceModel {
     );
     return 'Rp $formatted';
   }
+
+  /// Calculate total original price from catalog items
+  double get totalOriginalPrice {
+    if (catalogDetails == null || catalogDetails!.isEmpty) return totalAmount;
+    return catalogDetails!.fold(0.0, (sum, item) {
+      final price = (item['original_price'] as num?)?.toDouble() ?? 
+                   (item['price_estimation'] as num?)?.toDouble() ?? 0;
+      return sum + price;
+    });
+  }
+
+  /// Calculate total final price from catalog items
+  double get totalFinalPrice {
+    if (catalogDetails == null || catalogDetails!.isEmpty) return totalAmount;
+    return catalogDetails!.fold(0.0, (sum, item) {
+      final originalPrice = (item['original_price'] as num?)?.toDouble() ?? 
+                           (item['price_estimation'] as num?)?.toDouble() ?? 0;
+      final price = (item['final_price'] as num?)?.toDouble() ?? originalPrice;
+      return sum + price;
+    });
+  }
+
+  /// Format total original price
+  String get formattedTotalOriginalPrice {
+    final formatted = totalOriginalPrice.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
+  /// Format total final price
+  String get formattedTotalFinalPrice {
+    final formatted = totalFinalPrice.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
+  /// Check if there's a price difference
+  bool get hasPriceDifference => totalFinalPrice != totalOriginalPrice;
 }
 
 /// Controller untuk Invoice Admin
@@ -512,6 +554,42 @@ class InvoiceUIController extends GetxController {
             pw.SizedBox(height: 20),
             pw.Divider(),
             pw.SizedBox(height: 10),
+            // Total Harga Awal
+            if (invoice.catalogItemsWithPrice.isNotEmpty) ...[
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total Harga Awal', style: const pw.TextStyle(fontSize: 11)),
+                  pw.Text(
+                    invoice.formattedTotalOriginalPrice,
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      color: invoice.hasPriceDifference ? PdfColors.grey600 : PdfColors.black,
+                      decoration: invoice.hasPriceDifference ? pw.TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+              // Total Harga Final
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total Harga Final', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    invoice.formattedTotalFinalPrice,
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
+                      color: invoice.hasPriceDifference ? PdfColors.green : PdfColors.black,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(height: 1, color: PdfColors.grey400),
+              pw.SizedBox(height: 10),
+            ],
             // Subtotal
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -665,6 +743,9 @@ class InvoiceUIController extends GetxController {
         eventLocation: invoice.eventLocation ?? '-',
         durasi: invoice.durasi ?? '-',
         items: items,
+        totalOriginalPrice: invoice.formattedTotalOriginalPrice,
+        totalFinalPrice: invoice.formattedTotalFinalPrice,
+        hasPriceDifference: invoice.hasPriceDifference,
         subtotal: invoice.formattedSubtotal,
         discount: invoice.hasDiscount ? 'Rp ${invoice.discount.toStringAsFixed(0)}' : '',
         total: invoice.formattedTotal,

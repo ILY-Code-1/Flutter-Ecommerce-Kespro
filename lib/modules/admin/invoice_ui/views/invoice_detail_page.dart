@@ -115,10 +115,110 @@ class InvoiceDetailPage extends GetView<InvoiceUIController> {
         if (invoice.durasi != null) _buildInfoRow('Durasi', invoice.durasi!),
         const SizedBox(height: 16),
         _buildProductDetails(invoice, isMobile),
+        const SizedBox(height: 16),
+        _buildPriceSummary(invoice),
         const Divider(height: 24),
         _buildInfoRow('Total', invoice.formattedTotal, isBold: true, color: AppTheme.primaryColor),
         if (invoice.paidAmount > 0) _buildInfoRow('Terbayar', invoice.formattedPaidAmount),
       ],
+    );
+  }
+
+  Widget _buildPriceSummary(InvoiceModel invoice) {
+    final hasDifference = invoice.hasPriceDifference;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Harga Awal',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                invoice.formattedTotalOriginalPrice,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: hasDifference ? Colors.grey.shade600 : const Color(0xFF2D3748),
+                  decoration: hasDifference ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Harga Final',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                invoice.formattedTotalFinalPrice,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: hasDifference ? Colors.green.shade700 : AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          if (hasDifference) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    invoice.totalFinalPrice > invoice.totalOriginalPrice 
+                        ? Icons.trending_up_rounded 
+                        : Icons.trending_down_rounded,
+                    size: 16,
+                    color: invoice.totalFinalPrice > invoice.totalOriginalPrice
+                        ? Colors.orange.shade700
+                        : Colors.green.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    invoice.totalFinalPrice > invoice.totalOriginalPrice
+                        ? 'Harga Naik: ${invoice.formatPrice((invoice.totalFinalPrice - invoice.totalOriginalPrice).abs())}'
+                        : 'Hemat: ${invoice.formatPrice((invoice.totalOriginalPrice - invoice.totalFinalPrice).abs())}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: invoice.totalFinalPrice > invoice.totalOriginalPrice
+                          ? Colors.orange.shade700
+                          : Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
