@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../themes/app_theme.dart';
-import '../../widgets/nav_bar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/responsive_wrapper.dart';
@@ -16,10 +15,9 @@ class OrderPage extends GetView<OrderController> {
     final isMobile = ResponsiveWrapper.isMobile(context);
 
     return Scaffold(
-      endDrawer: const AppDrawer(),
+      backgroundColor: Colors.grey.shade100, // Background lebih gelap
       body: Column(
         children: [
-          const NavBar(),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -31,16 +29,68 @@ class OrderPage extends GetView<OrderController> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(AppTheme.borderRadius),
                     boxShadow: [
+                      // Shadow 1 - Paling dekat (dark)
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                      // Shadow 2 - Medium
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
+                      ),
+                      // Shadow 3 - Paling jauh (soft)
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 40,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Back Button
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: InkWell(
+                          onTap: () => Get.offAllNamed('/'),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.arrow_back_rounded,
+                                  size: 18,
+                                  color: Colors.grey.shade700,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Kembali ke Beranda',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                       const Text(
                         'FORM REQUEST ORDER',
                         style: TextStyle(

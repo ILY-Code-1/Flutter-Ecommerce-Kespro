@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if not exist \"assets\\images\" mkdir assets\\images)",
+      "Bash(copy web\\favicon.png assets\\images\\logo.png)",
+      "Edit(**)"
+    ]
+  }
+}

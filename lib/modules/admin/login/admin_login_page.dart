@@ -44,10 +44,17 @@ class AdminLoginPage extends GetView<AdminLoginController> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.event,
-                      size: 56,
-                      color: AppTheme.primaryColor,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -180,33 +187,6 @@ class AdminLoginPage extends GetView<AdminLoginController> {
                           )),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Hint for demo credentials
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          size: 18,
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Demo: admin / admin123',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ],
