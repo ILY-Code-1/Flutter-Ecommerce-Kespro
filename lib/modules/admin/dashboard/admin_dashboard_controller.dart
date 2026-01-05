@@ -85,8 +85,8 @@ class AdminDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Default ke bulan ini
-    selectedMonth.value = DateTime(DateTime.now().year, DateTime.now().month);
+    // Default ke semua bulan (null = no filter)
+    selectedMonth.value = null;
     fetchDashboardData();
   }
 
@@ -107,23 +107,28 @@ class AdminDashboardController extends GetxController {
         colorText: Colors.green.shade700);
   }
 
-  /// Fetch statistics for current month
+  /// Fetch statistics for selected month or all time
   Future<void> fetchStats() async {
     try {
       isLoadingStats.value = true;
 
-      final month = selectedMonth.value ?? DateTime.now();
-      final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
-
-      // Fetch orders for current month
-      final ordersResponse = await _supabase
+      // Build query for orders
+      var ordersQuery = _supabase
           .from('request_orders')
           .select('id, status')
-          .isFilter('deleted_at', null)
-          .gte('created_at', startOfMonth.toIso8601String())
-          .lte('created_at', endOfMonth.toIso8601String());
+          .isFilter('deleted_at', null);
 
+      // Add date filter only if month is selected
+      if (selectedMonth.value != null) {
+        final month = selectedMonth.value!;
+        final startOfMonth = DateTime(month.year, month.month, 1);
+        final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+        ordersQuery = ordersQuery
+            .gte('created_at', startOfMonth.toIso8601String())
+            .lte('created_at', endOfMonth.toIso8601String());
+      }
+
+      final ordersResponse = await ordersQuery;
       final orders = List<Map<String, dynamic>>.from(ordersResponse);
       totalOrders.value = orders.length;
       pendingOrders.value = orders.where((o) => 
@@ -138,14 +143,23 @@ class AdminDashboardController extends GetxController {
           .eq('is_active', true);
       totalActiveCatalogs.value = (catalogsResponse as List).length;
 
-      // Fetch invoices for current month
-      final invoicesResponse = await _supabase
+      // Build query for invoices
+      var invoicesQuery = _supabase
           .from('invoices')
           .select('id, total_amount, payment_status')
-          .isFilter('deleted_at', null)
-          .gte('created_at', startOfMonth.toIso8601String())
-          .lte('created_at', endOfMonth.toIso8601String());
+          .isFilter('deleted_at', null);
 
+      // Add date filter only if month is selected
+      if (selectedMonth.value != null) {
+        final month = selectedMonth.value!;
+        final startOfMonth = DateTime(month.year, month.month, 1);
+        final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+        invoicesQuery = invoicesQuery
+            .gte('created_at', startOfMonth.toIso8601String())
+            .lte('created_at', endOfMonth.toIso8601String());
+      }
+
+      final invoicesResponse = await invoicesQuery;
       final invoices = List<Map<String, dynamic>>.from(invoicesResponse);
       totalInvoices.value = invoices.length;
       
@@ -237,13 +251,13 @@ class AdminDashboardController extends GetxController {
 
   /// Change month filter
   void changeMonth(DateTime? month) {
-    selectedMonth.value = month ?? DateTime(DateTime.now().year, DateTime.now().month);
+    selectedMonth.value = month;
     fetchStats();
   }
 
   /// Get formatted month label
   String get monthLabel {
-    if (selectedMonth.value == null) return 'Bulan Ini';
+    if (selectedMonth.value == null) return 'Semua Bulan';
     return DateFormat('MMMM yyyy').format(selectedMonth.value!);
   }
 

@@ -4,7 +4,8 @@
       "Bash(if not exist \"assets\\images\" mkdir assets\\images)",
       "Bash(copy web\\favicon.png assets\\images\\logo.png)",
       "Edit(**)",
-      "Bash(cd \"C:\\Flutter\\FlutterProjects\\flutter_ecommerce_kespro\" && flutter analyze lib/modules/admin/invoice_ui/invoice_ui_controller.dart 2>&1 | Select-String -Pattern \"error|warning\" -Context 2)"
+      "Bash(cd \"C:\\Flutter\\FlutterProjects\\flutter_ecommerce_kespro\" && flutter analyze lib/modules/admin/invoice_ui/invoice_ui_controller.dart 2>&1 | Select-String -Pattern \"error|warning\" -Context 2)",
+      "Write(**)"
     ]
   }
 }

@@ -146,16 +146,22 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                 child: DropdownButton<DateTime?>(
                   value: controller.selectedMonth.value,
                   hint: const Text('Pilih Bulan'),
-                  items: List.generate(12, (i) {
-                    final date = DateTime(
-                      DateTime.now().year,
-                      DateTime.now().month - i,
-                    );
-                    return DropdownMenuItem(
-                      value: date,
-                      child: Text(DateFormat('MMMM yyyy').format(date)),
-                    );
-                  }),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('Semua Bulan'),
+                    ),
+                    ...List.generate(12, (i) {
+                      final date = DateTime(
+                        DateTime.now().year,
+                        DateTime.now().month - i,
+                      );
+                      return DropdownMenuItem(
+                        value: date,
+                        child: Text(DateFormat('MMMM yyyy').format(date)),
+                      );
+                    }),
+                  ],
                   onChanged: controller.changeMonth,
                 ),
               ),
@@ -218,6 +224,8 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
             'Manajemen Katalog',
             'Kelola katalog produk sewa',
           ),
+          // Action bar with refresh button
+          _buildCatalogActionBar(catalogController, isMobile),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 16 : 32),
@@ -333,6 +341,52 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCatalogActionBar(
+    CatalogController catalogController,
+    bool isMobile,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 32,
+        vertical: 12,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Obx(() => ElevatedButton.icon(
+            onPressed: catalogController.isLoading.value
+                ? null
+                : catalogController.fetchCatalogs,
+            icon: catalogController.isLoading.value
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.refresh, size: 18, color: Colors.white),
+            label: Text(
+              isMobile ? '' : 'Refresh',
+              style: const TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 16,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          )),
+        ],
       ),
     );
   }
@@ -644,6 +698,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 2,
                   child: Text(
                     'ID Request',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -655,6 +710,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 3,
                   child: Text(
                     'Nama Event Organizer',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -666,6 +722,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 3,
                   child: Text(
                     'Email',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -677,6 +734,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 2,
                   child: Text(
                     'Status',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -725,6 +783,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 2,
                     child: Text(
                       order.id,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -737,6 +796,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 3,
                     child: Text(
                       order.namaEO,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF2D3748),
@@ -748,6 +808,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 3,
                     child: Text(
                       order.email,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade700,
@@ -757,10 +818,12 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   ),
                   Expanded(
                     flex: 2,
-                    child: _buildStatusBadge(
-                      order.status.label,
-                      orderController.getStatusColor(order.status),
-                      orderController.getStatusBgColor(order.status),
+                    child: Center(
+                      child: _buildStatusBadge(
+                        order.status.label,
+                        orderController.getStatusColor(order.status),
+                        orderController.getStatusBgColor(order.status),
+                      ),
                     ),
                   ),
                   SizedBox(
@@ -1081,6 +1144,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 2,
                   child: Text(
                     'ID Invoice',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -1092,6 +1156,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 3,
                   child: Text(
                     'Nama Event Organizer',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -1103,6 +1168,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 3,
                   child: Text(
                     'Email',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -1114,6 +1180,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 2,
                   child: Text(
                     'Total',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -1125,6 +1192,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   flex: 2,
                   child: Text(
                     'Status',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -1173,6 +1241,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 2,
                     child: Text(
                       invoice.invoiceNumber,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -1185,6 +1254,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 3,
                     child: Text(
                       invoice.namaEO,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF2D3748),
@@ -1196,6 +1266,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 3,
                     child: Text(
                       invoice.email,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade700,
@@ -1207,6 +1278,7 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                     flex: 2,
                     child: Text(
                       invoice.formattedTotal,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -1217,10 +1289,12 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
                   ),
                   Expanded(
                     flex: 2,
-                    child: _buildStatusBadge(
-                      invoice.paymentStatus.label,
-                      invoiceController.getStatusColor(invoice.paymentStatus),
-                      invoiceController.getStatusBgColor(invoice.paymentStatus),
+                    child: Center(
+                      child: _buildStatusBadge(
+                        invoice.paymentStatus.label,
+                        invoiceController.getStatusColor(invoice.paymentStatus),
+                        invoiceController.getStatusBgColor(invoice.paymentStatus),
+                      ),
                     ),
                   ),
                   SizedBox(
