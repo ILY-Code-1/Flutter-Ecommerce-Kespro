@@ -624,64 +624,160 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
         },
       );
     }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(const Color(0xFFE6FBFF)),
-        columns: const [
-          DataColumn(
-            label: Text(
-              'ID Request',
-              style: TextStyle(fontWeight: FontWeight.w600),
+    
+    // Desktop/Web view - Custom responsive full-width table
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Table Header
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFE6FBFF),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'ID Request',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Nama Event Organizer',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Email',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Status',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    'Aksi',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          DataColumn(
-            label: Text(
-              'Nama Event Organizer',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          DataColumn(
-            label: Text('Email', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-          DataColumn(
-            label: Text(
-              'Status',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          DataColumn(
-            label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
+          // Table Rows
+          ...orderController.orders.asMap().entries.map((entry) {
+            final index = entry.key;
+            final order = entry.value;
+            final isLast = index == orderController.orders.length - 1;
+            
+            return Container(
+              decoration: BoxDecoration(
+                color: index.isEven ? Colors.white : const Color(0xFFF9FAFB),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isLast ? Colors.transparent : Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                borderRadius: isLast
+                    ? const BorderRadius.vertical(bottom: Radius.circular(12))
+                    : null,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      order.id,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF2D3748),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      order.namaEO,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF2D3748),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      order.email,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: _buildStatusBadge(
+                      order.status.label,
+                      orderController.getStatusColor(order.status),
+                      orderController.getStatusBgColor(order.status),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 80,
+                    child: Center(
+                      child: _buildActionBtn(
+                        Icons.visibility_rounded,
+                        AppTheme.accentColor,
+                        () => orderController.goToDetail(order),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
         ],
-        rows: orderController.orders.map((order) {
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  order.id,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              DataCell(Text(order.namaEO)),
-              DataCell(Text(order.email)),
-              DataCell(
-                _buildStatusBadge(
-                  order.status.label,
-                  orderController.getStatusColor(order.status),
-                  orderController.getStatusBgColor(order.status),
-                ),
-              ),
-              DataCell(
-                _buildActionBtn(
-                  Icons.visibility_rounded,
-                  AppTheme.accentColor,
-                  () => orderController.goToDetail(order),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
       ),
     );
   }
@@ -965,64 +1061,183 @@ class AdminDashboardPage extends GetView<AdminDashboardController> {
         },
       );
     }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(const Color(0xFFE6FBFF)),
-        columns: const [
-          DataColumn(
-            label: Text(
-              'ID Invoice',
-              style: TextStyle(fontWeight: FontWeight.w600),
+    
+    // Desktop/Web view - Custom responsive full-width table
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Table Header
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFE6FBFF),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'ID Invoice',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Nama Event Organizer',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Email',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Total',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Status',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    'Aksi',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          DataColumn(
-            label: Text(
-              'Nama Event Organizer',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          DataColumn(
-            label: Text('Email', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-          DataColumn(
-            label: Text(
-              'Status',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          DataColumn(
-            label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
+          // Table Rows
+          ...invoiceController.invoices.asMap().entries.map((entry) {
+            final index = entry.key;
+            final invoice = entry.value;
+            final isLast = index == invoiceController.invoices.length - 1;
+            
+            return Container(
+              decoration: BoxDecoration(
+                color: index.isEven ? Colors.white : const Color(0xFFF9FAFB),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isLast ? Colors.transparent : Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                borderRadius: isLast
+                    ? const BorderRadius.vertical(bottom: Radius.circular(12))
+                    : null,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      invoice.invoiceNumber,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF2D3748),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      invoice.namaEO,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF2D3748),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      invoice.email,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      invoice.formattedTotal,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: _buildStatusBadge(
+                      invoice.paymentStatus.label,
+                      invoiceController.getStatusColor(invoice.paymentStatus),
+                      invoiceController.getStatusBgColor(invoice.paymentStatus),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 80,
+                    child: Center(
+                      child: _buildActionBtn(
+                        Icons.visibility_rounded,
+                        AppTheme.accentColor,
+                        () => invoiceController.goToDetail(invoice),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
         ],
-        rows: invoiceController.invoices.map((invoice) {
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  invoice.invoiceNumber,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              DataCell(Text(invoice.namaEO)),
-              DataCell(Text(invoice.email)),
-              DataCell(
-                _buildStatusBadge(
-                  invoice.paymentStatus.label,
-                  invoiceController.getStatusColor(invoice.paymentStatus),
-                  invoiceController.getStatusBgColor(invoice.paymentStatus),
-                ),
-              ),
-              DataCell(
-                _buildActionBtn(
-                  Icons.visibility_rounded,
-                  AppTheme.accentColor,
-                  () => invoiceController.goToDetail(invoice),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
       ),
     );
   }
